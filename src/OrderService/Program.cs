@@ -55,6 +55,9 @@ builder.Services.AddMassTransit(x =>
             return options;
         });
 
+        // Ensure message types are published with their full names
+        cfg.PublishTopology.BrokerTopologyOptions = PublishBrokerTopologyOptions.MaintainHierarchy;
+
         // Configure retry policy
         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
 
