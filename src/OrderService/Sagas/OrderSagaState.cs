@@ -19,7 +19,7 @@ public class OrderSagaState : SagaStateMachineInstance, ISaga
     /// <summary>
     /// Current state of the saga
     /// </summary>
-    public string CurrentState { get; set; } = string.Empty;
+    public string CurrentState { get; set; }
 
     /// <summary>
     /// Customer identifier

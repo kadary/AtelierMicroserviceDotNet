@@ -37,14 +37,6 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         // Define the state machine
         InstanceState(x => x.CurrentState);
 
-        // Initialize event properties
-        OrderCreated = Event<OrderCreatedEvent>("OrderCreated");
-        ProductsReservationSucceeded = Event<ProductsReservationSucceededEvent>("ProductsReservationSucceeded");
-        ProductsReservationFailed = Event<ProductsReservationFailedEvent>("ProductsReservationFailed");
-        NotificationSucceeded = Event<NotificationSucceededEvent>("NotificationSucceeded");
-        NotificationFailed = Event<NotificationFailedEvent>("NotificationFailed");
-        CompensationSucceeded = Event<CompensationSucceededEvent>("CompensationSucceeded");
-
         // Initialize state properties
         Initial = State("Initial");
         ProductsReservationAttempted = State("ProductsReservationAttempted");
@@ -52,6 +44,14 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         OrderCompleted = State("OrderCompleted");
         OrderFailed = State("OrderFailed");
         OrderCancelled = State("OrderCancelled");
+
+        // Initialize event properties
+        OrderCreated = Event<OrderCreatedEvent>("OrderCreated");
+        ProductsReservationSucceeded = Event<ProductsReservationSucceededEvent>("ProductsReservationSucceeded");
+        ProductsReservationFailed = Event<ProductsReservationFailedEvent>("ProductsReservationFailed");
+        NotificationSucceeded = Event<NotificationSucceededEvent>("NotificationSucceeded");
+        NotificationFailed = Event<NotificationFailedEvent>("NotificationFailed");
+        CompensationSucceeded = Event<CompensationSucceededEvent>("CompensationSucceeded");
 
         // Define the correlation ID for all events
         Event(() => OrderCreated, x => x.CorrelateById(context => context.Message.OrderId));
@@ -64,8 +64,8 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         // Define the initial state
         Initially(
             When(OrderCreated)
-                .Then(context => InitializeState(context))
-                .ThenAsync(context => ReserveProducts(context))
+                .Then(InitializeState)
+                .ThenAsync(ReserveProducts)
                 .TransitionTo(ProductsReservationAttempted)
         );
 
@@ -77,10 +77,10 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
                     context.Saga.ProductsReserved = true;
                     _logger.LogInformation("Products reservation succeeded for order {OrderId}, updating state", context.Saga.CorrelationId);
                 })
-                .ThenAsync(context => SendNotification(context))
+                .ThenAsync(SendNotification)
                 .TransitionTo(NotificationAttempted),
             When(ProductsReservationFailed)
-                .ThenAsync(context => HandleProductsReservationFailure(context))
+                .ThenAsync(HandleProductsReservationFailure)
                 .TransitionTo(OrderFailed)
         );
 
