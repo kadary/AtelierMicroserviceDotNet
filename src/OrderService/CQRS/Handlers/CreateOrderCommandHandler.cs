@@ -5,6 +5,7 @@ using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.CQRS.Commands;
+using OrderService.CQRS.DTOs;
 using OrderService.Models;
 using OrderService.Repositories;
 using OrderService.Sagas.Events;

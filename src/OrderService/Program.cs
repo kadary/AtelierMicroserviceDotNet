@@ -23,6 +23,14 @@ builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure JSON serialization options
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { 
@@ -30,6 +38,10 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "A microservice for managing orders and publishing order events"
     });
+
+    // Configure Swagger to handle circular references
+    c.CustomSchemaIds(type => type.FullName);
+    c.UseAllOfToExtendReferenceSchemas();
 });
 
 // Register repositories
