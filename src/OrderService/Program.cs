@@ -5,6 +5,8 @@ using OrderService.Repositories;
 using OrderService.CQRS.Commands;
 using OrderService.CQRS.Queries;
 using OrderService.CQRS.DTOs;
+using OrderService.Sagas;
+using OrderService.Sagas.Events;
 using Polly;
 using Polly.Extensions.Http;
 using System.Reflection;
@@ -50,9 +52,13 @@ builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 // Register MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
-// Configure MassTransit with RabbitMQ - Simplified configuration
+// Configure MassTransit with RabbitMQ and Saga
 builder.Services.AddMassTransit(x =>
 {
+    // Add the OrderSaga state machine
+    x.AddSagaStateMachine<OrderSaga, OrderSagaState>()
+        .InMemoryRepository();
+
     // Configure RabbitMQ as the message broker
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -65,6 +71,9 @@ builder.Services.AddMassTransit(x =>
 
         // Configure retry policy
         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+
+        // Configure the saga endpoint
+        cfg.ConfigureSaga<OrderSagaState>(context);
     });
 });
 

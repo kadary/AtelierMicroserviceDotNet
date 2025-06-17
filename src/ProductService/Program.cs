@@ -134,6 +134,78 @@ productsGroup.MapDelete("/{id}", async (Guid id, IProductRepository repository) 
 .Produces(StatusCodes.Status204NoContent)
 .Produces(StatusCodes.Status404NotFound);
 
+// Reserve products endpoint
+productsGroup.MapPost("/reserve", async (ReserveProductsRequest request, IProductRepository repository, ILogger<Program> logger) =>
+{
+    logger.LogInformation("Request received: Reserve products for order {OrderId}", request.OrderId);
+
+    try
+    {
+        // Convert the request to the format expected by the repository
+        var productReservations = request.Items.Select(item => (item.ProductId, item.Quantity)).ToList();
+
+        // Attempt to reserve the products
+        var (success, errorMessage) = await repository.ReserveProductsAsync(productReservations);
+
+        if (success)
+        {
+            logger.LogInformation("Products reserved successfully for order {OrderId}", request.OrderId);
+            return Results.Ok(new { Success = true });
+        }
+        else
+        {
+            logger.LogWarning("Failed to reserve products for order {OrderId}: {ErrorMessage}", request.OrderId, errorMessage);
+            return Results.BadRequest(new { Success = false, ErrorMessage = errorMessage });
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error reserving products for order {OrderId}", request.OrderId);
+        return Results.Problem("An error occurred while reserving products.");
+    }
+})
+.WithName("ReserveProducts")
+.WithDescription("Reserves products for an order")
+.Produces<object>(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
+// Release products endpoint
+productsGroup.MapPost("/release", async (ReleaseProductsRequest request, IProductRepository repository, ILogger<Program> logger) =>
+{
+    logger.LogInformation("Request received: Release products for order {OrderId}", request.OrderId);
+
+    try
+    {
+        // Convert the request to the format expected by the repository
+        var productReservations = request.Items.Select(item => (item.ProductId, item.Quantity)).ToList();
+
+        // Release the products
+        var success = await repository.ReleaseProductsAsync(productReservations);
+
+        if (success)
+        {
+            logger.LogInformation("Products released successfully for order {OrderId}", request.OrderId);
+            return Results.Ok(new { Success = true });
+        }
+        else
+        {
+            logger.LogWarning("Failed to release products for order {OrderId}", request.OrderId);
+            return Results.BadRequest(new { Success = false });
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error releasing products for order {OrderId}", request.OrderId);
+        return Results.Problem("An error occurred while releasing products.");
+    }
+})
+.WithName("ReleaseProducts")
+.WithDescription("Releases previously reserved products")
+.Produces<object>(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
 // Health check endpoint
 app.MapGet("/health", () =>
 {
@@ -143,5 +215,24 @@ app.MapGet("/health", () =>
 .WithName("HealthCheck")
 .WithDescription("Returns the health status of the service")
 .WithTags("Health");
+
+// Define request models
+public class ReserveProductsRequest
+{
+    public Guid OrderId { get; set; }
+    public List<ProductReservationItem> Items { get; set; } = new();
+}
+
+public class ReleaseProductsRequest
+{
+    public Guid OrderId { get; set; }
+    public List<ProductReservationItem> Items { get; set; } = new();
+}
+
+public class ProductReservationItem
+{
+    public Guid ProductId { get; set; }
+    public int Quantity { get; set; }
+}
 
 app.Run();
