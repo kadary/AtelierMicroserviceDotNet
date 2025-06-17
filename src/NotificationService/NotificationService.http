@@ -1,6 +1,24 @@
-@NotificationService_HostAddress = http://localhost:5205
+@NotificationService_HostAddress = http://localhost:5003
 
-GET {{NotificationService_HostAddress}}/weatherforecast/
+# Get notification service status
+GET {{NotificationService_HostAddress}}/api/notifications/status
+Accept: application/json
+
+###
+
+# Send test email
+POST {{NotificationService_HostAddress}}/api/notifications/test-email
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "name": "Test Customer"
+}
+
+###
+
+# Health check
+GET {{NotificationService_HostAddress}}/health
 Accept: application/json
 
 ###

@@ -1,6 +1,51 @@
-@ProductService_HostAddress = http://localhost:5045
+@ProductService_HostAddress = http://localhost:5001
 
-GET {{ProductService_HostAddress}}/weatherforecast/
+# Get all products
+GET {{ProductService_HostAddress}}/api/products/
+Accept: application/json
+
+###
+
+# Get product by ID
+GET {{ProductService_HostAddress}}/api/products/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Create a new product
+POST {{ProductService_HostAddress}}/api/products/
+Content-Type: application/json
+
+{
+  "name": "New Product",
+  "description": "This is a new product",
+  "price": 99.99,
+  "stockQuantity": 100
+}
+
+###
+
+# Update a product
+PUT {{ProductService_HostAddress}}/api/products/3fa85f64-5717-4562-b3fc-2c963f66afa6
+Content-Type: application/json
+
+{
+  "name": "Updated Product",
+  "description": "This product has been updated",
+  "price": 129.99,
+  "stockQuantity": 50
+}
+
+###
+
+# Delete a product
+DELETE {{ProductService_HostAddress}}/api/products/3fa85f64-5717-4562-b3fc-2c963f66afa6
+Accept: application/json
+
+###
+
+# Health check
+GET {{ProductService_HostAddress}}/health
 Accept: application/json
 
 ###

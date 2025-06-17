@@ -1,6 +1,47 @@
-@OrderService_HostAddress = http://localhost:5049
+@OrderService_HostAddress = http://localhost:5002
 
-GET {{OrderService_HostAddress}}/weatherforecast/
+# Get all orders
+GET {{OrderService_HostAddress}}/api/orders/
+Accept: application/json
+
+###
+
+# Get order by ID
+GET {{OrderService_HostAddress}}/api/orders/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Create a new order
+POST {{OrderService_HostAddress}}/api/orders/
+Content-Type: application/json
+
+{
+  "customerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "customerName": "John Doe",
+  "customerEmail": "john.doe@example.com",
+  "items": [
+    {
+      "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "productName": "Laptop",
+      "unitPrice": 1299.99,
+      "quantity": 1
+    }
+  ]
+}
+
+###
+
+# Update order status
+PUT {{OrderService_HostAddress}}/api/orders/3fa85f64-5717-4562-b3fc-2c963f66afa6/status
+Content-Type: application/json
+
+2
+
+###
+
+# Health check
+GET {{OrderService_HostAddress}}/health
 Accept: application/json
 
 ###

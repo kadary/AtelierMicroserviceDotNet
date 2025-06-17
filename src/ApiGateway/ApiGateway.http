@@ -1,6 +1,36 @@
-@ApiGateway_HostAddress = http://localhost:5104
+@ApiGateway_HostAddress = http://localhost:5000
 
-GET {{ApiGateway_HostAddress}}/weatherforecast/
+# Products API
+GET {{ApiGateway_HostAddress}}/api/products/
+Accept: application/json
+
+###
+
+# Get product by ID
+GET {{ApiGateway_HostAddress}}/api/products/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Orders API
+GET {{ApiGateway_HostAddress}}/api/orders/
+Accept: application/json
+
+###
+
+# Notifications API
+GET {{ApiGateway_HostAddress}}/api/notifications/status
+Accept: application/json
+
+###
+
+# Health checks
+GET {{ApiGateway_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{ApiGateway_HostAddress}}/health/products
 Accept: application/json
 
 ###

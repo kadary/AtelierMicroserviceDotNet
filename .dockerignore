@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]ogs/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.dbmdl
+*.jfm
+*.pfx
+*.publishsettings
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Docker
+.dockerignore
+**/Dockerfile
+**/docker-compose*
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Misc
+*.swp
+*.tmp
+*.log
+.DS_Store

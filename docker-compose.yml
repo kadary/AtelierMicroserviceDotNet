@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    image: api-gateway
+    container_name: api-gateway
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+    depends_on:
+      - product-service
+      - order-service
+      - notification-service
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
+  # Product Service
+  product-service:
+    image: product-service
+    container_name: product-service
+    build:
+      context: .
+      dockerfile: src/ProductService/Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
+  # Order Service
+  order-service:
+    image: order-service
+    container_name: order-service
+    build:
+      context: .
+      dockerfile: src/OrderService/Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5002
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
+  # Notification Service
+  notification-service:
+    image: notification-service
+    container_name: notification-service
+    build:
+      context: .
+      dockerfile: src/NotificationService/Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5003
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672"  # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - microservices-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  rabbitmq-data:
