@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: src/ApiGateway/Dockerfile
     ports:
-      - "5000:5000"
+      - "8080:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000

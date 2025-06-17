@@ -148,7 +148,7 @@ docker-compose up -d
 
 Les endpoints détaillés sont disponibles via Swagger une fois les services démarrés :
 
-- API Gateway: http://localhost:5000/swagger
+- API Gateway: http://localhost:8080/swagger
 - ProductService: http://localhost:5001/swagger
 - OrderService: http://localhost:5002/swagger
 - NotificationService: http://localhost:5003/swagger
@@ -157,9 +157,129 @@ Les endpoints détaillés sont disponibles via Swagger une fois les services dé
 
 Le projet est organisé comme suit :
 
-- `/src` - Code source des services
-  - `/ProductService` - Service de gestion des produits
-  - `/OrderService` - Service de gestion des commandes
-  - `/NotificationService` - Service de notification
-  - `/ApiGateway` - API Gateway avec Ocelot
-- `/docker` - Fichiers Docker et Docker Compose
+### Fichiers Racine
+
+- `AtelierMicroserviceDotNet.sln` - Fichier solution Visual Studio qui regroupe tous les projets
+- `README.md` - Documentation du projet (ce fichier)
+- `docker-compose.yml` - Configuration Docker Compose pour orchestrer tous les services
+- `.dockerignore` - Spécifie les fichiers à ignorer lors de la construction des images Docker
+- `.gitignore` - Spécifie les fichiers à ignorer dans le contrôle de version Git
+- `LICENSE` - Licence du projet (MIT)
+
+### Répertoire `/src`
+
+Contient le code source de tous les microservices et de l'API Gateway.
+
+#### `/src/ProductService`
+
+Service responsable de la gestion des produits.
+
+- **Fichiers Principaux**:
+  - `ProductService.csproj` - Fichier projet .NET
+  - `Program.cs` - Point d'entrée de l'application et configuration des endpoints API
+  - `Dockerfile` - Instructions pour construire l'image Docker du service
+
+- **Sous-répertoires**:
+  - `/Models` - Définitions des modèles de données
+    - `Product.cs` - Classe représentant un produit
+  - `/Repositories` - Implémentation du pattern Repository
+    - `IProductRepository.cs` - Interface définissant les opérations sur les produits
+    - `ProductRepository.cs` - Implémentation en mémoire du repository
+  - `/Properties` - Configuration de lancement
+    - `launchSettings.json` - Configuration des profils de lancement
+
+- **Fichiers de Configuration**:
+  - `appsettings.json` - Configuration générale de l'application
+  - `appsettings.Development.json` - Configuration spécifique à l'environnement de développement
+  - `ProductService.http` - Fichiers de requêtes HTTP pour tester l'API
+
+#### `/src/OrderService`
+
+Service responsable de la gestion des commandes et de la publication d'événements.
+
+- **Fichiers Principaux**:
+  - `OrderService.csproj` - Fichier projet .NET
+  - `Program.cs` - Point d'entrée de l'application et configuration des endpoints API
+  - `Dockerfile` - Instructions pour construire l'image Docker du service
+
+- **Sous-répertoires**:
+  - `/Models` - Définitions des modèles de données
+    - `Order.cs` - Classe représentant une commande et ses éléments
+  - `/Repositories` - Implémentation du pattern Repository
+    - `IOrderRepository.cs` - Interface définissant les opérations sur les commandes
+    - `OrderRepository.cs` - Implémentation en mémoire du repository
+  - `/Messages` - Définitions des messages pour la communication événementielle
+    - `OrderCreated.cs` - Message publié lorsqu'une commande est créée
+  - `/Properties` - Configuration de lancement
+    - `launchSettings.json` - Configuration des profils de lancement
+
+- **Fichiers de Configuration**:
+  - `appsettings.json` - Configuration générale de l'application
+  - `appsettings.Development.json` - Configuration spécifique à l'environnement de développement
+  - `OrderService.http` - Fichiers de requêtes HTTP pour tester l'API
+
+#### `/src/NotificationService`
+
+Service responsable de la consommation des événements et de l'envoi de notifications.
+
+- **Fichiers Principaux**:
+  - `NotificationService.csproj` - Fichier projet .NET
+  - `Program.cs` - Point d'entrée de l'application et configuration des endpoints API
+  - `Dockerfile` - Instructions pour construire l'image Docker du service
+
+- **Sous-répertoires**:
+  - `/Consumers` - Consommateurs d'événements
+    - `OrderCreatedConsumer.cs` - Consommateur pour les événements OrderCreated
+  - `/Messages` - Définitions des messages pour la communication événementielle
+    - `OrderCreated.cs` - Message consommé lorsqu'une commande est créée
+  - `/Services` - Services métier
+    - `IEmailService.cs` - Interface pour le service d'envoi d'emails
+    - `EmailService.cs` - Implémentation du service d'envoi d'emails
+  - `/Properties` - Configuration de lancement
+    - `launchSettings.json` - Configuration des profils de lancement
+
+- **Fichiers de Configuration**:
+  - `appsettings.json` - Configuration générale de l'application
+  - `appsettings.Development.json` - Configuration spécifique à l'environnement de développement
+  - `NotificationService.http` - Fichiers de requêtes HTTP pour tester l'API
+
+#### `/src/ApiGateway`
+
+API Gateway qui centralise les requêtes vers les différents microservices.
+
+- **Fichiers Principaux**:
+  - `ApiGateway.csproj` - Fichier projet .NET
+  - `Program.cs` - Point d'entrée de l'application et configuration d'Ocelot
+  - `Dockerfile` - Instructions pour construire l'image Docker du service
+
+- **Fichiers de Configuration**:
+  - `ocelot.json` - Configuration des routes pour rediriger les requêtes vers les microservices
+  - `appsettings.json` - Configuration générale de l'application
+  - `appsettings.Development.json` - Configuration spécifique à l'environnement de développement
+  - `ApiGateway.http` - Fichiers de requêtes HTTP pour tester l'API Gateway
+  - `/Properties/launchSettings.json` - Configuration des profils de lancement
+
+### Répertoire `/logs`
+
+Contient les fichiers de logs générés par les différents services.
+
+- `product-service-*.txt` - Logs du ProductService
+- `order-service-*.txt` - Logs du OrderService
+- `notification-service-*.txt` - Logs du NotificationService
+- `api-gateway-*.txt` - Logs de l'API Gateway
+
+### Fichiers Docker
+
+- `docker-compose.yml` - Définit les services, réseaux et volumes pour l'application complète
+  - Configure les 4 services (api-gateway, product-service, order-service, notification-service)
+  - Configure RabbitMQ pour la messagerie
+  - Définit le réseau "microservices-network" pour la communication entre services
+  - Configure les volumes pour la persistance des données et des logs
+
+- `.dockerignore` - Spécifie les fichiers à exclure lors de la construction des images Docker
+
+- Dockerfiles individuels dans chaque répertoire de service:
+  - `/src/ProductService/Dockerfile`
+  - `/src/OrderService/Dockerfile`
+  - `/src/NotificationService/Dockerfile`
+  - `/src/ApiGateway/Dockerfile`
