@@ -88,7 +88,11 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Gui
             };
 
             await _publishEndpoint.Publish(orderCreatedEvent, cancellationToken);
-            _logger.LogInformation("Published OrderCreatedEvent for order {OrderId}", createdOrder.Id);
+            _logger.LogInformation("Published OrderCreatedEvent for order {OrderId}, Customer: {CustomerName}, Items: {ItemCount}, Total: {TotalAmount}", 
+                createdOrder.Id, 
+                createdOrder.CustomerName, 
+                createdOrder.Items.Count, 
+                createdOrder.TotalAmount);
 
             // Also publish the OrderCreated message for the NotificationService
             var orderCreatedMessage = new OrderCreated
@@ -102,7 +106,11 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Gui
             };
 
             await _publishEndpoint.Publish(orderCreatedMessage, cancellationToken);
-            _logger.LogInformation("Published OrderCreated message for order {OrderId}", createdOrder.Id);
+            _logger.LogInformation("Published OrderCreated message for order {OrderId}, Customer: {CustomerName}, Email: {CustomerEmail}, Total: {TotalAmount}", 
+                createdOrder.Id, 
+                createdOrder.CustomerName, 
+                createdOrder.CustomerEmail, 
+                createdOrder.TotalAmount);
 
             return createdOrder.Id;
         }

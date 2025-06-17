@@ -49,6 +49,7 @@ productsGroup.MapGet("/", async (IProductRepository repository) =>
 {
     logger.LogInformation("Request received: Get all products");
     var products = await repository.GetAllAsync();
+    logger.LogInformation("Returning {Count} products", products.Count());
     return Results.Ok(products);
 })
 .WithName("GetAllProducts")
@@ -77,10 +78,12 @@ productsGroup.MapGet("/{id}", async (Guid id, IProductRepository repository) =>
 // Create product
 productsGroup.MapPost("/", async (Product product, IProductRepository repository) =>
 {
-    logger.LogInformation("Request received: Create product {ProductName}", product.Name);
+    logger.LogInformation("Request received: Create product {ProductName} with price {Price} and stock {Stock}", 
+        product.Name, product.Price, product.StockQuantity);
     var createdProduct = await repository.CreateAsync(product);
 
-    logger.LogInformation("Product created: {Id}", createdProduct.Id);
+    logger.LogInformation("Product created: {Id}, Name: {Name}, Price: {Price}, Stock: {Stock}", 
+        createdProduct.Id, createdProduct.Name, createdProduct.Price, createdProduct.StockQuantity);
     return Results.Created($"/api/products/{createdProduct.Id}", createdProduct);
 })
 .WithName("CreateProduct")

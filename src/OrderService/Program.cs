@@ -1,15 +1,14 @@
 using Serilog;
 using MassTransit;
 using OrderService.Models;
-using OrderService.Messages;
 using OrderService.Repositories;
 using OrderService.CQRS.Commands;
 using OrderService.CQRS.Queries;
 using OrderService.CQRS.DTOs;
 using Polly;
 using Polly.Extensions.Http;
-using System.Text.Json;
 using System.Reflection;
+using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 

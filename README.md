@@ -23,25 +23,25 @@ Le projet est composé de 4 composants principaux :
                               │                  
                               │ HTTP/REST        
                               │                  
-                 ┌────────────│────────────────────────────────────┐
-                 │            │                                    │             
-                 ▼            ▼                                    │
-┌─────────────────┐    ┌─────────────┐    ┌─────────────────┐      │
-│                 │    │             │    │                 │      │
-│ ProductService  │◀───┤OrderService │───▶│    RabbitMQ     │      │
-│                 │    │             │    │  Message Broker │      │
-└─────────────────┘    └─────────────┘    └────────┬────────┘      │
-      ▲                       │                    │               │
-      │                       │                    │               │
-      │                       │                    │ AMQP          │
-      │                       │                    │ (MassTransit) │ 
-      │                       │                    │               │
-      │                       │                    ▼               │
-      │                       │            ┌─────────────────┐     │
-      │                       │            │                 │     │
-      │                       │            │NotificationSvc  │ ◀───┘
-      │                       │            │                 │
-      │                       │            └─────────────────┘
+                 ┌────────────│───────────────────────────────────────────────┐
+                 │            │                                               │             
+                 ▼            ▼                                               │
+┌─────────────────┐    ┌─────────────────────────┐    ┌─────────────────┐     │
+│                 │    │      OrderService       │    │                 │     │
+│ ProductService  │◀───┤                         │───▶│    RabbitMQ     │     │
+│                 │    │  ┌─────────┐ ┌────────┐ │    │  Message Broker │     │
+└─────────────────┘    │  │ Commands│ │Queries │ │    └────────┬────────┘     │
+      ▲                │  └────┬────┘ └───┬────┘ │            │               │
+      │                │       │          │      │            │               │
+      │                │       ▼          ▼      │            │ AMQP          │
+      │                │  ┌─────────────────┐    │            │ (MassTransit) │ 
+      │                │  │     MediatR     │    │            │               │
+      │                │  └────────┬────────┘    │            ▼               │
+      │                │           │             │    ┌─────────────────┐     │
+      │                │      ┌────┴─────┐       │    │                 │     │
+      │                │      │  Sagas   │       │    │NotificationSvc  │ ◀───┘
+      │                │      └──────────┘       │    │                 │
+      │                └─────────────────────────┘    └─────────────────┘
       │                       │
       └───────────────────────┘
            HTTP/REST avec
@@ -54,13 +54,25 @@ Le projet est composé de 4 composants principaux :
 
 2. **API Gateway → Services** : L'API Gateway (Ocelot) route les requêtes vers les microservices appropriés (ProductService ou OrderService) en utilisant HTTP/REST.
 
-3. **OrderService → ProductService** : Lors de la création d'une commande, l'OrderService peut avoir besoin de vérifier les informations des produits auprès du ProductService. Cette communication utilise HTTP/REST avec Polly pour la résilience (retry, circuit breaker).
+3. **OrderService (CQRS)** : À l'intérieur de l'OrderService, le pattern CQRS est implémenté :
+   - Les requêtes HTTP entrantes sont transformées en Commands (pour les opérations d'écriture) ou Queries (pour les opérations de lecture)
+   - MediatR dispatche ces Commands/Queries vers les Handlers appropriés
+   - Les Handlers exécutent la logique métier et interagissent avec le Repository
 
-4. **OrderService → RabbitMQ** : Lorsqu'une commande est créée, l'OrderService publie un événement `OrderCreated` sur RabbitMQ en utilisant le protocole AMQP via MassTransit.
+4. **OrderService (SAGA)** : Pour les opérations qui nécessitent une coordination entre services :
+   - Après la création d'une commande, un OrderCreatedEvent est publié
+   - La Saga orchestre le processus en suivant les étapes et en maintenant l'état dans OrderSagaState
+   - En cas d'échec, des actions compensatoires sont exécutées pour maintenir la cohérence
 
-5. **RabbitMQ → NotificationService** : Le NotificationService s'abonne aux événements `OrderCreated` sur RabbitMQ et les consomme via AMQP (MassTransit) pour envoyer des notifications par email.
+5. **OrderService → ProductService** : Lors de la création d'une commande, l'OrderService peut avoir besoin de vérifier les informations des produits auprès du ProductService. Cette communication utilise HTTP/REST avec Polly pour la résilience (retry, circuit breaker).
 
-Cette architecture découplée permet une grande flexibilité et résilience. Si un service est temporairement indisponible, les messages restent dans la file d'attente RabbitMQ et seront traités une fois le service rétabli.
+6. **OrderService → RabbitMQ** : Lorsqu'une commande est créée, l'OrderService publie des événements sur RabbitMQ en utilisant le protocole AMQP via MassTransit :
+   - `OrderCreatedEvent` pour la Saga interne
+   - `OrderCreated` pour la notification externe
+
+7. **RabbitMQ → NotificationService** : Le NotificationService s'abonne aux événements `OrderCreated` sur RabbitMQ et les consomme via AMQP (MassTransit) pour envoyer des notifications par email.
+
+Cette architecture découplée permet une grande flexibilité et résilience. Si un service est temporairement indisponible, les messages restent dans la file d'attente RabbitMQ et seront traités une fois le service rétabli. L'utilisation de CQRS et SAGA renforce cette résilience en permettant une meilleure séparation des préoccupations et une gestion robuste des transactions distribuées.
 
 ## Technologies Utilisées
 
@@ -68,11 +80,60 @@ Cette architecture découplée permet une grande flexibilité et résilience. Si
 - **Docker** et **Docker Compose** pour la conteneurisation
 - **Ocelot** comme API Gateway
 - **Polly** pour la résilience
-- **MassTransit** avec **RabbitMQ** pour la messagerie
+- **MediatR** pour l'implémentation du pattern CQRS
+- **MassTransit** avec **RabbitMQ** pour la messagerie et l'orchestration des Sagas
 - **Swagger** pour la documentation des API
-- **Serilog** pour le logging
+- **Serilog** pour le logging structuré et centralisé
 
 ## Patterns de Conception Utilisés
+
+### CQRS (Command Query Responsibility Segregation)
+
+Le pattern CQRS sépare les opérations de lecture (Queries) des opérations d'écriture (Commands) pour optimiser les performances et la scalabilité. Dans notre projet :
+
+- **Séparation des responsabilités** : Les commandes (modifications d'état) sont séparées des requêtes (lectures d'état)
+- **Modèles distincts** : Utilisation de DTOs spécifiques pour les commandes et les requêtes
+- **Traitement spécialisé** : Handlers dédiés pour chaque commande et requête
+
+Ce pattern est implémenté dans l'OrderService avec :
+- **MediatR** comme médiateur pour dispatcher les commandes et requêtes
+- Structure de dossiers `/CQRS` avec sous-dossiers `/Commands`, `/Queries`, `/Handlers` et `/DTOs`
+- Commandes comme `CreateOrderCommand` et `UpdateOrderStatusCommand`
+- Requêtes comme `GetAllOrdersQuery` et `GetOrderByIdQuery`
+- Handlers correspondants qui implémentent `IRequestHandler<TRequest, TResponse>` de MediatR
+
+Avantages de cette implémentation :
+- **Découplage** : Les composants d'écriture et de lecture évoluent indépendamment
+- **Optimisation** : Possibilité d'optimiser séparément les modèles de lecture et d'écriture
+- **Testabilité** : Facilite les tests unitaires des commandes et requêtes
+- **Extensibilité** : Ajout facile de nouvelles commandes et requêtes sans modifier le code existant
+
+### SAGA Pattern
+
+Le pattern SAGA gère les transactions distribuées à travers plusieurs microservices, en utilisant une séquence d'étapes compensatoires en cas d'échec. Dans notre projet :
+
+- **Coordination des transactions** : Gestion cohérente des opérations qui impliquent plusieurs services
+- **Compensation** : Mécanisme de rollback en cas d'échec d'une étape
+- **État persistant** : Suivi de l'état de la saga pour permettre la reprise après un crash
+
+Ce pattern est implémenté dans l'OrderService avec :
+- **MassTransit** comme framework pour orchestrer les sagas
+- Structure de dossiers `/Sagas` avec `/Events` et `OrderSagaState.cs`
+- Événements comme `OrderCreatedEvent` et commandes comme `ReserveProductsCommand`
+- État de la saga dans `OrderSagaState` qui suit la progression de la transaction
+
+Le flux typique d'une saga dans notre système :
+1. Création d'une commande (OrderService)
+2. Publication de l'événement `OrderCreatedEvent`
+3. Réservation des produits (ProductService) via `ReserveProductsCommand`
+4. Notification au client (NotificationService) via `OrderCreated`
+5. En cas d'échec à n'importe quelle étape, exécution d'actions compensatoires
+
+Avantages de cette implémentation :
+- **Cohérence éventuelle** : Garantit la cohérence des données à terme, même en cas de défaillance
+- **Résilience** : Le système peut récupérer après des pannes
+- **Traçabilité** : L'état de la saga permet de suivre la progression des transactions
+- **Découplage** : Les services communiquent via des événements sans couplage direct
 
 ### API Gateway (Ocelot)
 
@@ -149,6 +210,53 @@ Le pattern Containerization avec Docker permet :
 - **Orchestration** : Permet l'utilisation d'outils comme Kubernetes pour la gestion des conteneurs
 
 Chaque service possède son propre Dockerfile, et Docker Compose est utilisé pour orchestrer l'ensemble du système.
+
+## Stratégie de Logging et Suivi du Flux de Données
+
+Le projet implémente une stratégie de logging complète pour faciliter le suivi du flux de données à travers les différents microservices. Cette approche permet de tracer le parcours complet d'une requête, depuis son entrée dans le système jusqu'à son traitement final.
+
+### Implémentation du Logging
+
+- **Serilog** est utilisé dans tous les services pour fournir un logging structuré et cohérent
+- Les logs sont écrits à la fois dans la console et dans des fichiers texte dans le répertoire `/logs`
+- Chaque service a son propre fichier de log avec rotation quotidienne (par exemple, `product-service-20250617.txt`)
+- Le format des logs inclut l'horodatage, le niveau de log, et le contexte de l'opération
+
+### Suivi du Flux de Données
+
+Le logging permet de suivre le flux de données complet à travers le système :
+
+1. **API Gateway** : Logs des requêtes entrantes et de leur routage vers les services appropriés
+2. **ProductService** : Logs des opérations CRUD sur les produits
+3. **OrderService** :
+   - Logs des opérations CRUD sur les commandes
+   - Logs détaillés de la publication des événements vers RabbitMQ
+   - Logs des appels HTTP vers le ProductService avec la politique de résilience Polly
+4. **NotificationService** :
+   - Logs de la consommation des événements depuis RabbitMQ
+   - Logs détaillés du traitement des messages et de l'envoi d'emails
+
+Cette approche permet de :
+- **Déboguer** efficacement les problèmes en suivant le parcours complet d'une requête
+- **Surveiller** le comportement du système en production
+- **Analyser** les performances et identifier les goulots d'étranglement
+- **Auditer** les opérations effectuées sur le système
+
+### Accès aux Logs
+
+Les logs sont accessibles de plusieurs façons :
+- En temps réel via la sortie console des conteneurs Docker
+- Dans les fichiers de log montés dans le volume `/logs` du système hôte
+- Via la commande `docker logs <container-name>` pour voir les logs d'un conteneur spécifique
+
+Pour suivre les logs en temps réel :
+```bash
+# Suivre les logs d'un service spécifique
+docker logs -f product-service
+
+# Suivre les logs de tous les services
+docker-compose logs -f
+```
 
 ## Fonctionnalités
 

@@ -63,6 +63,20 @@ app.MapGet("/health", () =>
 .WithDescription("Returns the health status of the API Gateway")
 .WithTags("Health");
 
+// Add middleware to log request routing
+app.Use(async (context, next) =>
+{
+    var originalPath = context.Request.Path;
+    var method = context.Request.Method;
+
+    logger.LogInformation("Request received: {Method} {Path}", method, originalPath);
+
+    await next();
+
+    logger.LogInformation("Response sent for: {Method} {Path}, Status: {StatusCode}", 
+        method, originalPath, context.Response.StatusCode);
+});
+
 // Configure Ocelot middleware
 await app.UseOcelot();
 
