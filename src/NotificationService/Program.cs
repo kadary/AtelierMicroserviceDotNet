@@ -38,7 +38,7 @@ builder.Services.AddMassTransit(x =>
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(prefix: "notification", includeNamespace: false));
 
     // Configure JSON serialization to handle different namespaces
-    x.AddConfigureJsonSerializerOptions(options => 
+    x.ConfigureJsonSerializerOptions(options => 
     {
         options.PropertyNameCaseInsensitive = true;
         return options;
@@ -64,14 +64,8 @@ builder.Services.AddMassTransit(x =>
         // Configure consumer endpoint
         cfg.ReceiveEndpoint("order-created", e =>
         {
-            // Configure consumer with explicit message type
-            e.ConfigureConsumer<OrderCreatedConsumer>(context, c => 
-            {
-                c.Message<NotificationService.Messages.OrderCreated>(m => 
-                {
-                    m.SetEntityName("OrderService.Messages:OrderCreated");
-                });
-            });
+            // Configure consumer
+            e.ConfigureConsumer<OrderCreatedConsumer>(context);
 
             // Configure retry policy
             e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
