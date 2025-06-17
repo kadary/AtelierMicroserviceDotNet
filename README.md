@@ -1,4 +1,4 @@
-# Atelier Microservices DotNet 8
+# Formation Microservices: Atelier avec .Net 8
 
 Ce projet sert d'atelier à la formation Microservices avec DotNet 8 dispensée par le cabinet Demkada Academy.
 
@@ -14,26 +14,53 @@ Le projet est composé de 4 composants principaux :
 ### Diagramme de Flux de Données
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────────┐
-│             │     │             │     │                 │
-│   Client    │────▶│ API Gateway │────▶│ ProductService  │
-│             │     │  (Ocelot)   │     │                 │
-└─────────────┘     └──────┬──────┘     └─────────────────┘
-                           │
-                           │            ┌─────────────────┐
-                           │            │                 │
-                           └───────────▶│  OrderService   │
-                                        │                 │
-                                        └────────┬────────┘
-                                                 │
-                                                 │ (MassTransit + RabbitMQ)
-                                                 │
-                                        ┌────────▼────────┐
-                                        │                 │
-                                        │NotificationSvc  │
-                                        │                 │
-                                        └─────────────────┘
+┌─────────────┐     ┌─────────────────────┐     
+│             │     │                     │     
+│   Client    │────▶│    API Gateway      │     
+│             │     │     (Ocelot)        │     
+└─────────────┘     └─────────┬───────────┘     
+      HTTP/REST               │                  
+                              │                  
+                              │ HTTP/REST        
+                              │                  
+                 ┌────────────│
+                 │            │                
+                 ▼            ▼              
+┌─────────────────┐    ┌─────────────┐    ┌─────────────────┐
+│                 │    │             │    │                 │
+│ ProductService  │◀───┤OrderService │───▶│    RabbitMQ     │
+│                 │    │             │    │  Message Broker │
+└─────────────────┘    └─────────────┘    └────────┬────────┘
+      ▲                       │                     │
+      │                       │                     │
+      │                       │                     │ AMQP
+      │                       │                     │ (MassTransit)
+      │                       │                     │
+      │                       │                     ▼
+      │                       │            ┌─────────────────┐
+      │                       │            │                 │
+      │                       │            │NotificationSvc  │
+      │                       │            │                 │
+      │                       │            └─────────────────┘
+      │                       │
+      └───────────────────────┘
+           HTTP/REST avec
+         Polly (Resilience)
 ```
+
+#### Explication du Flux de Données
+
+1. **Client → API Gateway** : Les clients communiquent avec le système via l'API Gateway en utilisant le protocole HTTP/REST. L'API Gateway sert de point d'entrée unique pour toutes les requêtes.
+
+2. **API Gateway → Services** : L'API Gateway (Ocelot) route les requêtes vers les microservices appropriés (ProductService ou OrderService) en utilisant HTTP/REST.
+
+3. **OrderService → ProductService** : Lors de la création d'une commande, l'OrderService peut avoir besoin de vérifier les informations des produits auprès du ProductService. Cette communication utilise HTTP/REST avec Polly pour la résilience (retry, circuit breaker).
+
+4. **OrderService → RabbitMQ** : Lorsqu'une commande est créée, l'OrderService publie un événement `OrderCreated` sur RabbitMQ en utilisant le protocole AMQP via MassTransit.
+
+5. **RabbitMQ → NotificationService** : Le NotificationService s'abonne aux événements `OrderCreated` sur RabbitMQ et les consomme via AMQP (MassTransit) pour envoyer des notifications par email.
+
+Cette architecture découplée permet une grande flexibilité et résilience. Si un service est temporairement indisponible, les messages restent dans la file d'attente RabbitMQ et seront traités une fois le service rétabli.
 
 ## Technologies Utilisées
 

@@ -35,6 +35,9 @@ builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 // Configure MassTransit with RabbitMQ
 builder.Services.AddMassTransit(x =>
 {
+    // Set up endpoint name formatter
+    x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(prefix: "order", includeNamespace: false));
+
     x.UsingRabbitMq((context, cfg) =>
     {
         // Configure RabbitMQ connection
@@ -42,6 +45,14 @@ builder.Services.AddMassTransit(x =>
         {
             h.Username("guest");
             h.Password("guest");
+        });
+
+        // Configure JSON serializer
+        cfg.ConfigureJsonSerializerOptions(options =>
+        {
+            options.PropertyNameCaseInsensitive = true;
+            options.WriteIndented = true;
+            return options;
         });
 
         // Configure retry policy

@@ -34,6 +34,9 @@ builder.Services.AddMassTransit(x =>
     // Add consumer
     x.AddConsumer<OrderCreatedConsumer>();
 
+    // Set up endpoint name formatter
+    x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(prefix: "notification", includeNamespace: false));
+
     x.UsingRabbitMq((context, cfg) =>
     {
         // Configure RabbitMQ connection
@@ -43,13 +46,26 @@ builder.Services.AddMassTransit(x =>
             h.Password("guest");
         });
 
+        // Configure JSON serializer
+        cfg.ConfigureJsonSerializerOptions(options =>
+        {
+            options.PropertyNameCaseInsensitive = true;
+            options.WriteIndented = true;
+            return options;
+        });
+
         // Configure consumer endpoint
         cfg.ReceiveEndpoint("order-created", e =>
         {
+            // Configure consumer
             e.ConfigureConsumer<OrderCreatedConsumer>(context);
 
             // Configure retry policy
             e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+
+            // Set up message binding
+            e.ConfigureConsumeTopology = false;
+            e.Bind("OrderService.Messages:OrderCreated");
         });
     });
 });
