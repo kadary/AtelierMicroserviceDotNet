@@ -3,9 +3,13 @@ using MassTransit;
 using OrderService.Models;
 using OrderService.Messages;
 using OrderService.Repositories;
+using OrderService.CQRS.Commands;
+using OrderService.CQRS.Queries;
+using OrderService.CQRS.DTOs;
 using Polly;
 using Polly.Extensions.Http;
 using System.Text.Json;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +35,9 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register repositories
 builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
+
+// Register MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 // Configure MassTransit with RabbitMQ - Simplified configuration
 builder.Services.AddMassTransit(x =>
@@ -74,21 +81,21 @@ var ordersGroup = app.MapGroup("/api/orders")
     .WithOpenApi();
 
 // Get all orders
-ordersGroup.MapGet("/", async (IOrderRepository repository) =>
+ordersGroup.MapGet("/", async (IMediator mediator, ILogger<Program> logger) =>
 {
     logger.LogInformation("Request received: Get all orders");
-    var orders = await repository.GetAllAsync();
+    var orders = await mediator.Send(new GetAllOrdersQuery());
     return Results.Ok(orders);
 })
 .WithName("GetAllOrders")
 .WithDescription("Gets all orders")
-.Produces<IEnumerable<Order>>(StatusCodes.Status200OK);
+.Produces<IEnumerable<OrderDto>>(StatusCodes.Status200OK);
 
 // Get order by ID
-ordersGroup.MapGet("/{id}", async (Guid id, IOrderRepository repository) =>
+ordersGroup.MapGet("/{id}", async (Guid id, IMediator mediator, ILogger<Program> logger) =>
 {
     logger.LogInformation("Request received: Get order by ID {Id}", id);
-    var order = await repository.GetByIdAsync(id);
+    var order = await mediator.Send(new GetOrderByIdQuery(id));
 
     if (order == null)
     {
@@ -100,87 +107,59 @@ ordersGroup.MapGet("/{id}", async (Guid id, IOrderRepository repository) =>
 })
 .WithName("GetOrderById")
 .WithDescription("Gets an order by its unique identifier")
-.Produces<Order>(StatusCodes.Status200OK)
+.Produces<OrderDto>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
 // Create order
-ordersGroup.MapPost("/", async (Order order, IOrderRepository repository, IPublishEndpoint publishEndpoint) =>
+ordersGroup.MapPost("/", async (CreateOrderCommand command, IMediator mediator, ILogger<Program> logger) =>
 {
-    logger.LogInformation("Request received: Create order for customer {CustomerName}", order.CustomerName);
+    logger.LogInformation("Request received: Create order for customer {CustomerName}", command.CustomerName);
 
     try
     {
-        // Save the order
-        var createdOrder = await repository.CreateAsync(order);
+        // Send the command to create the order
+        var orderId = await mediator.Send(command);
+        logger.LogInformation("Order created with ID: {OrderId}", orderId);
 
-        // Create and publish the OrderCreated event
-        var orderCreatedEvent = new OrderCreated
-        {
-            OrderId = createdOrder.Id,
-            CustomerName = createdOrder.CustomerName,
-            CustomerEmail = createdOrder.CustomerEmail,
-            TotalAmount = createdOrder.TotalAmount,
-            ItemCount = createdOrder.Items.Count,
-            CreatedAt = createdOrder.CreatedAt
-        };
+        // Get the created order
+        var createdOrder = await mediator.Send(new GetOrderByIdQuery(orderId));
 
-        logger.LogInformation("Publishing OrderCreated event for order {OrderId} with type {MessageType} and properties: {Properties}", 
-            createdOrder.Id, 
-            typeof(OrderCreated).FullName,
-            new 
-            { 
-                orderCreatedEvent.OrderId,
-                orderCreatedEvent.CustomerName,
-                orderCreatedEvent.CustomerEmail,
-                orderCreatedEvent.TotalAmount,
-                orderCreatedEvent.ItemCount,
-                orderCreatedEvent.CreatedAt
-            });
-
-        try 
-        {
-            await publishEndpoint.Publish(orderCreatedEvent);
-            logger.LogInformation("Successfully published OrderCreated event for order {OrderId} to RabbitMQ", createdOrder.Id);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error publishing OrderCreated event for order {OrderId}: {ErrorMessage}", createdOrder.Id, ex.Message);
-            throw; // Re-throw to let the controller handle it
-        }
-
-        logger.LogInformation("Order created and event published: {Id}", createdOrder.Id);
-        return Results.Created($"/api/orders/{createdOrder.Id}", createdOrder);
+        return Results.Created($"/api/orders/{orderId}", createdOrder);
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error creating order for customer {CustomerName}", order.CustomerName);
+        logger.LogError(ex, "Error creating order for customer {CustomerName}", command.CustomerName);
         return Results.Problem("An error occurred while creating the order.");
     }
 })
 .WithName("CreateOrder")
-.WithDescription("Creates a new order and publishes an OrderCreated event")
-.Produces<Order>(StatusCodes.Status201Created)
+.WithDescription("Creates a new order using CQRS pattern")
+.Produces<OrderDto>(StatusCodes.Status201Created)
 .Produces(StatusCodes.Status500InternalServerError);
 
 // Update order status
-ordersGroup.MapPut("/{id}/status", async (Guid id, OrderStatus status, IOrderRepository repository) =>
+ordersGroup.MapPut("/{id}/status", async (Guid id, OrderStatus status, IMediator mediator, ILogger<Program> logger) =>
 {
     logger.LogInformation("Request received: Update order status {Id} to {Status}", id, status);
 
-    var updatedOrder = await repository.UpdateStatusAsync(id, status);
+    var command = new UpdateOrderStatusCommand(id, status);
+    var result = await mediator.Send(command);
 
-    if (updatedOrder == null)
+    if (!result)
     {
         logger.LogWarning("Order not found for status update: {Id}", id);
         return Results.NotFound();
     }
+
+    // Get the updated order
+    var updatedOrder = await mediator.Send(new GetOrderByIdQuery(id));
 
     logger.LogInformation("Order status updated: {Id} to {Status}", id, status);
     return Results.Ok(updatedOrder);
 })
 .WithName("UpdateOrderStatus")
 .WithDescription("Updates the status of an existing order")
-.Produces<Order>(StatusCodes.Status200OK)
+.Produces<OrderDto>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
 // Health check endpoint

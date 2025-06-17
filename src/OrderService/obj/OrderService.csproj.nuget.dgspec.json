@@ -48,9 +48,17 @@
               "target": "Package",
               "version": "[8.1.3, )"
             },
+            "MassTransit.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.1.3, )"
+            },
             "MassTransit.RabbitMQ": {
               "target": "Package",
               "version": "[8.1.3, )"
+            },
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.2.0, )"
             },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
