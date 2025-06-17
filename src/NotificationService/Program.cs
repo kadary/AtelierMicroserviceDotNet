@@ -3,6 +3,8 @@ using MassTransit;
 using NotificationService.Consumers;
 using NotificationService.Services;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +34,25 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register services
 builder.Services.AddSingleton<IEmailService, EmailService>();
+
+// Add Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = "http://identity-server:5004"; // IdentityServer URL
+    options.RequireHttpsMetadata = false; // For development only
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = false
+    };
+});
+
+// Add Authorization
+builder.Services.AddAuthorization();
 
 // Configure MassTransit with RabbitMQ - Simplified configuration
 builder.Services.AddMassTransit(x =>

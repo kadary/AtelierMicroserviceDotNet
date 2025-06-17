@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  # Identity Server
+  identity-server:
+    image: identity-server
+    container_name: identity-server
+    build:
+      context: .
+      dockerfile: src/IdentityServer/Dockerfile
+    ports:
+      - "5004:5004"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5004
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
   # API Gateway
   api-gateway:
     image: api-gateway

@@ -11,6 +11,8 @@ using Polly;
 using Polly.Extensions.Http;
 using System.Reflection;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +57,31 @@ builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 
 // Register MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+// Add Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = "http://identity-server:5004"; // IdentityServer URL
+    options.RequireHttpsMetadata = false; // For development only
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = false
+    };
+});
+
+// Add Authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("OrdersReadPolicy", policy =>
+        policy.RequireClaim("scope", "orders:read"));
+    options.AddPolicy("OrdersWritePolicy", policy =>
+        policy.RequireClaim("scope", "orders:write"));
+});
 
     // Configure MassTransit with RabbitMQ and Saga
 builder.Services.AddMassTransit(x =>
@@ -101,12 +128,17 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 logger.LogInformation("Starting OrderService");
 
 // Order endpoints
 var ordersGroup = app.MapGroup("/api/orders")
     .WithTags("Orders")
-    .WithOpenApi();
+    .WithOpenApi()
+    .RequireAuthorization(); // Require authorization for all endpoints in this group
 
 // Get all orders
 ordersGroup.MapGet("/", async (IMediator mediator, ILogger<Program> logger) =>

@@ -1,6 +1,8 @@
 using Serilog;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,35 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Add Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = "http://identity-server:5004"; // IdentityServer URL
+    options.RequireHttpsMetadata = false; // For development only
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = false
+    };
+});
+
+// Add Authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("OrdersReadPolicy", policy =>
+        policy.RequireClaim("scope", "orders:read"));
+    options.AddPolicy("OrdersWritePolicy", policy =>
+        policy.RequireClaim("scope", "orders:write"));
+    options.AddPolicy("ProductsReadPolicy", policy =>
+        policy.RequireClaim("scope", "products:read"));
+    options.AddPolicy("ProductsWritePolicy", policy =>
+        policy.RequireClaim("scope", "products:write"));
+});
+
 // Add Ocelot services
 builder.Services.AddOcelot(builder.Configuration);
 
@@ -49,6 +80,10 @@ app.UseSwaggerUI();
 app.UseSerilogRequestLogging();
 
 app.UseCors("CorsPolicy");
+
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Starting API Gateway");

@@ -2,6 +2,8 @@ using Serilog;
 using ProductService.Models;
 using ProductService.Repositories;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,31 @@ builder.Services.AddSwaggerGen(c =>
 // Register repositories
 builder.Services.AddSingleton<IProductRepository, ProductRepository>();
 
+// Add Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = "http://identity-server:5004"; // IdentityServer URL
+    options.RequireHttpsMetadata = false; // For development only
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = false
+    };
+});
+
+// Add Authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ProductsReadPolicy", policy =>
+        policy.RequireClaim("scope", "products:read"));
+    options.AddPolicy("ProductsWritePolicy", policy =>
+        policy.RequireClaim("scope", "products:write"));
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -36,13 +63,18 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Starting ProductService");
 
 // Product endpoints
 var productsGroup = app.MapGroup("/api/products")
     .WithTags("Products")
-    .WithOpenApi();
+    .WithOpenApi()
+    .RequireAuthorization(); // Require authorization for all endpoints in this group
 
 // Get all products
 productsGroup.MapGet("/", async (IProductRepository repository) =>
