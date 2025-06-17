@@ -216,6 +216,8 @@ app.MapGet("/health", () =>
 .WithDescription("Returns the health status of the service")
 .WithTags("Health");
 
+app.Run();
+
 // Define request models
 public class ReserveProductsRequest
 {
@@ -234,5 +236,3 @@ public class ProductReservationItem
     public Guid ProductId { get; set; }
     public int Quantity { get; set; }
 }
-
-app.Run();
