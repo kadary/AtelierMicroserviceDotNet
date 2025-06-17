@@ -2,6 +2,7 @@ using Serilog;
 using MassTransit;
 using NotificationService.Consumers;
 using NotificationService.Services;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,10 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Create logger for startup configuration
+var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
+var logger = loggerFactory.CreateLogger<Program>();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -28,21 +33,13 @@ builder.Services.AddSwaggerGen(c =>
 // Register services
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
-// Configure MassTransit with RabbitMQ
+// Configure MassTransit with RabbitMQ - Simplified configuration
 builder.Services.AddMassTransit(x =>
 {
     // Add consumer
     x.AddConsumer<OrderCreatedConsumer>();
 
-    // Set up endpoint name formatter
-    x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(prefix: "notification", includeNamespace: false));
-
-    // Configure JSON serialization to handle different namespaces
-    x.ConfigureJsonSerializerOptions(options => 
-    {
-        options.PropertyNameCaseInsensitive = true;
-        return options;
-    });
+    logger.LogInformation("Configured MassTransit with OrderCreatedConsumer");
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -53,28 +50,18 @@ builder.Services.AddMassTransit(x =>
             h.Password("guest");
         });
 
-        // Configure JSON serializer
-        cfg.ConfigureJsonSerializerOptions(options =>
-        {
-            options.PropertyNameCaseInsensitive = true;
-            options.WriteIndented = true;
-            return options;
-        });
-
         // Configure consumer endpoint
         cfg.ReceiveEndpoint("order-created", e =>
         {
+            logger.LogInformation("Configuring OrderCreated consumer endpoint");
+
             // Configure consumer
             e.ConfigureConsumer<OrderCreatedConsumer>(context);
+            logger.LogInformation("Configured OrderCreatedConsumer");
 
             // Configure retry policy
             e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-
-            // Set up message binding
-            e.ConfigureConsumeTopology = false;
-
-            // Bind to the exchange created by MassTransit for the OrderCreated message
-            e.Bind("OrderService.Messages:OrderCreated");
+            logger.LogInformation("Configured message retry policy");
         });
     });
 });
@@ -87,7 +74,7 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
+// Use the existing logger
 logger.LogInformation("Starting NotificationService");
 
 // Notification endpoints

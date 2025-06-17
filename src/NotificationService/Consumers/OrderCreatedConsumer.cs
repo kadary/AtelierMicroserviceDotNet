@@ -1,7 +1,7 @@
 namespace NotificationService.Consumers;
 
 using MassTransit;
-using NotificationService.Messages;
+using OrderService.Messages;
 using NotificationService.Services;
 
 /// <summary>
@@ -29,15 +29,27 @@ public class OrderCreatedConsumer : IConsumer<OrderCreated>
     /// <param name="context">The consume context containing the message</param>
     public async Task Consume(ConsumeContext<OrderCreated> context)
     {
+        _logger.LogInformation("Consumer triggered: OrderCreatedConsumer.Consume method called");
+
         var message = context.Message;
-        
-        _logger.LogInformation("Received OrderCreated event for order {OrderId}", message.OrderId);
-        
+
+        _logger.LogInformation("Received OrderCreated event with type {MessageType} and properties: {Properties}", 
+            typeof(OrderCreated).FullName,
+            new 
+            { 
+                message.OrderId,
+                message.CustomerName,
+                message.CustomerEmail,
+                message.TotalAmount,
+                message.ItemCount,
+                message.CreatedAt
+            });
+
         try
         {
             // Send order confirmation email
             var subject = $"Order Confirmation - Order #{message.OrderId}";
-            
+
             var result = await _emailService.SendOrderConfirmationAsync(
                 message.CustomerEmail,
                 subject,
@@ -45,7 +57,7 @@ public class OrderCreatedConsumer : IConsumer<OrderCreated>
                 message.OrderId,
                 message.TotalAmount,
                 message.ItemCount);
-            
+
             if (result)
             {
                 _logger.LogInformation("Order confirmation email sent successfully for order {OrderId}", message.OrderId);

@@ -32,12 +32,10 @@ builder.Services.AddSwaggerGen(c =>
 // Register repositories
 builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 
-// Configure MassTransit with RabbitMQ
+// Configure MassTransit with RabbitMQ - Simplified configuration
 builder.Services.AddMassTransit(x =>
 {
-    // Set up endpoint name formatter
-    x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(prefix: "order", includeNamespace: false));
-
+    // Configure RabbitMQ as the message broker
     x.UsingRabbitMq((context, cfg) =>
     {
         // Configure RabbitMQ connection
@@ -47,21 +45,8 @@ builder.Services.AddMassTransit(x =>
             h.Password("guest");
         });
 
-        // Configure JSON serializer
-        cfg.ConfigureJsonSerializerOptions(options =>
-        {
-            options.PropertyNameCaseInsensitive = true;
-            options.WriteIndented = true;
-            return options;
-        });
-
-        // Ensure message types are published with their full names
-        cfg.PublishTopology.BrokerTopologyOptions = PublishBrokerTopologyOptions.MaintainHierarchy;
-
         // Configure retry policy
         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-
-        cfg.ConfigureEndpoints(context);
     });
 });
 
@@ -139,8 +124,29 @@ ordersGroup.MapPost("/", async (Order order, IOrderRepository repository, IPubli
             CreatedAt = createdOrder.CreatedAt
         };
 
-        logger.LogInformation("Publishing OrderCreated event for order {OrderId}", createdOrder.Id);
-        await publishEndpoint.Publish(orderCreatedEvent);
+        logger.LogInformation("Publishing OrderCreated event for order {OrderId} with type {MessageType} and properties: {Properties}", 
+            createdOrder.Id, 
+            typeof(OrderCreated).FullName,
+            new 
+            { 
+                orderCreatedEvent.OrderId,
+                orderCreatedEvent.CustomerName,
+                orderCreatedEvent.CustomerEmail,
+                orderCreatedEvent.TotalAmount,
+                orderCreatedEvent.ItemCount,
+                orderCreatedEvent.CreatedAt
+            });
+
+        try 
+        {
+            await publishEndpoint.Publish(orderCreatedEvent);
+            logger.LogInformation("Successfully published OrderCreated event for order {OrderId} to RabbitMQ", createdOrder.Id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error publishing OrderCreated event for order {OrderId}: {ErrorMessage}", createdOrder.Id, ex.Message);
+            throw; // Re-throw to let the controller handle it
+        }
 
         logger.LogInformation("Order created and event published: {Id}", createdOrder.Id);
         return Results.Created($"/api/orders/{createdOrder.Id}", createdOrder);
