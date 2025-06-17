@@ -34,6 +34,9 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         _orderRepository = orderRepository;
         _logger = logger;
 
+        // Define the state machine
+        InstanceState(x => x.CurrentState);
+
         // Initialize event properties
         OrderCreated = Event<OrderCreatedEvent>("OrderCreated");
         ProductsReservationSucceeded = Event<ProductsReservationSucceededEvent>("ProductsReservationSucceeded");
@@ -43,14 +46,12 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         CompensationSucceeded = Event<CompensationSucceededEvent>("CompensationSucceeded");
 
         // Initialize state properties
+        Initial = State("Initial");
         ProductsReservationAttempted = State("ProductsReservationAttempted");
         NotificationAttempted = State("NotificationAttempted");
         OrderCompleted = State("OrderCompleted");
         OrderFailed = State("OrderFailed");
         OrderCancelled = State("OrderCancelled");
-
-        // Define the state machine
-        InstanceState(x => x.CurrentState);
 
         // Define the correlation ID for all events
         Event(() => OrderCreated, x => x.CorrelateById(context => context.Message.OrderId));
@@ -114,6 +115,7 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
     public Event<CompensationSucceededEvent> CompensationSucceeded { get; private set; }
 
     // Define the states
+    public State Initial { get; private set; }
     public State ProductsReservationAttempted { get; private set; }
     public State NotificationAttempted { get; private set; }
     public State OrderCompleted { get; private set; }
