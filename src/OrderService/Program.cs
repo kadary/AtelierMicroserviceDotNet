@@ -23,6 +23,10 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+// Create logger for startup configuration
+var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());
+var logger = loggerFactory.CreateLogger<Program>();
+
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 
@@ -52,7 +56,7 @@ builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 // Register MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
-// Configure MassTransit with RabbitMQ and Saga
+    // Configure MassTransit with RabbitMQ and Saga
 builder.Services.AddMassTransit(x =>
 {
     // Add the OrderSaga state machine
@@ -73,7 +77,12 @@ builder.Services.AddMassTransit(x =>
         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
 
         // Configure the saga endpoint
-        cfg.ConfigureSaga<OrderSagaState>(context);
+        cfg.ReceiveEndpoint("order-saga", e =>
+        {
+            // Configure the state machine saga
+            e.ConfigureSaga<OrderSagaState>(context);
+            logger.LogInformation("Configured OrderSaga state machine");
+        });
     });
 });
 
@@ -92,7 +101,6 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Starting OrderService");
 
 // Order endpoints

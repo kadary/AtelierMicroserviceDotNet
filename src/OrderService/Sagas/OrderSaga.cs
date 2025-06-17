@@ -34,11 +34,31 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         _orderRepository = orderRepository;
         _logger = logger;
 
+        // Initialize event properties
+        OrderCreated = Event<OrderCreatedEvent>("OrderCreated");
+        ProductsReservationSucceeded = Event<ProductsReservationSucceededEvent>("ProductsReservationSucceeded");
+        ProductsReservationFailed = Event<ProductsReservationFailedEvent>("ProductsReservationFailed");
+        NotificationSucceeded = Event<NotificationSucceededEvent>("NotificationSucceeded");
+        NotificationFailed = Event<NotificationFailedEvent>("NotificationFailed");
+        CompensationSucceeded = Event<CompensationSucceededEvent>("CompensationSucceeded");
+
+        // Initialize state properties
+        ProductsReservationAttempted = State("ProductsReservationAttempted");
+        NotificationAttempted = State("NotificationAttempted");
+        OrderCompleted = State("OrderCompleted");
+        OrderFailed = State("OrderFailed");
+        OrderCancelled = State("OrderCancelled");
+
         // Define the state machine
         InstanceState(x => x.CurrentState);
 
-        // Define the correlation ID
+        // Define the correlation ID for all events
         Event(() => OrderCreated, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => ProductsReservationSucceeded, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => ProductsReservationFailed, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => NotificationSucceeded, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => NotificationFailed, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => CompensationSucceeded, x => x.CorrelateById(context => context.Message.OrderId));
 
         // Define the initial state
         Initially(
@@ -51,22 +71,30 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
         // Define the ProductsReservationAttempted state
         During(ProductsReservationAttempted,
             When(ProductsReservationSucceeded)
-                .Then(context => context.Instance.ProductsReserved = true)
+                .Then(context => 
+                {
+                    context.Saga.ProductsReserved = true;
+                    _logger.LogInformation("Products reservation succeeded for order {OrderId}, updating state", context.Saga.CorrelationId);
+                })
                 .ThenAsync(context => SendNotification(context))
                 .TransitionTo(NotificationAttempted),
             When(ProductsReservationFailed)
-                .Then(context => HandleProductsReservationFailure(context))
+                .ThenAsync(context => HandleProductsReservationFailure(context))
                 .TransitionTo(OrderFailed)
         );
 
         // Define the NotificationAttempted state
         During(NotificationAttempted,
             When(NotificationSucceeded)
-                .Then(context => context.Instance.NotificationSent = true)
+                .Then(context => 
+                {
+                    context.Saga.NotificationSent = true;
+                    _logger.LogInformation("Notification succeeded for order {OrderId}, updating state", context.Saga.CorrelationId);
+                })
                 .ThenAsync(context => CompleteOrder(context))
                 .TransitionTo(OrderCompleted),
             When(NotificationFailed)
-                .Then(context => HandleNotificationFailure(context))
+                .ThenAsync(context => HandleNotificationFailure(context))
                 .TransitionTo(OrderFailed)
         );
 
@@ -96,34 +124,34 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
     private void InitializeState(BehaviorContext<OrderSagaState, OrderCreatedEvent> context)
     {
         var message = context.Message;
-        var instance = context.Instance;
+        var saga = context.Saga;
 
-        instance.CorrelationId = message.OrderId;
-        instance.CustomerId = message.CustomerId;
-        instance.CustomerName = message.CustomerName;
-        instance.CustomerEmail = message.CustomerEmail;
-        instance.OrderItems = message.Items.ToList();
-        instance.TotalAmount = message.TotalAmount;
-        instance.CreatedAt = message.CreatedAt;
-        instance.ProductsReserved = false;
-        instance.NotificationSent = false;
+        saga.CorrelationId = message.OrderId;
+        saga.CustomerId = message.CustomerId;
+        saga.CustomerName = message.CustomerName;
+        saga.CustomerEmail = message.CustomerEmail;
+        saga.OrderItems = message.Items.ToList();
+        saga.TotalAmount = message.TotalAmount;
+        saga.CreatedAt = message.CreatedAt;
+        saga.ProductsReserved = false;
+        saga.NotificationSent = false;
 
-        _logger.LogInformation("OrderSaga initialized for order {OrderId}", instance.CorrelationId);
+        _logger.LogInformation("OrderSaga initialized for order {OrderId}", saga.CorrelationId);
     }
 
     // Reserve products
     private async Task ReserveProducts(BehaviorContext<OrderSagaState, OrderCreatedEvent> context)
     {
-        var instance = context.Instance;
-        _logger.LogInformation("Attempting to reserve products for order {OrderId}", instance.CorrelationId);
+        var saga = context.Saga;
+        _logger.LogInformation("Attempting to reserve products for order {OrderId}", saga.CorrelationId);
 
         try
         {
             // Create the ReserveProductsCommand
             var command = new ReserveProductsCommand
             {
-                OrderId = instance.CorrelationId,
-                Items = instance.OrderItems.Select(item => new ProductReservationItem
+                OrderId = saga.CorrelationId,
+                Items = saga.OrderItems.Select(item => new ProductReservationItem
                 {
                     ProductId = item.ProductId,
                     Quantity = item.Quantity
@@ -132,30 +160,36 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
 
             // Send the command to the ProductService
             var client = _httpClientFactory.CreateClient("ProductService");
+            _logger.LogInformation("Sending reserve products request to ProductService for order {OrderId} with {ItemCount} items", 
+                saga.CorrelationId, command.Items.Count);
+
             var response = await client.PostAsJsonAsync("/api/products/reserve", command);
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Products reserved successfully for order {OrderId}", instance.CorrelationId);
-                await context.Raise(new ProductsReservationSucceededEvent { OrderId = instance.CorrelationId });
+                _logger.LogInformation("Products reserved successfully for order {OrderId}", saga.CorrelationId);
+                // Use the state machine's event publishing mechanism
+                await context.Publish(new ProductsReservationSucceededEvent { OrderId = saga.CorrelationId });
             }
             else
             {
                 var errorMessage = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to reserve products for order {OrderId}: {ErrorMessage}", instance.CorrelationId, errorMessage);
-                await context.Raise(new ProductsReservationFailedEvent 
+                _logger.LogWarning("Failed to reserve products for order {OrderId}: {ErrorMessage}", saga.CorrelationId, errorMessage);
+                // Use the state machine's event publishing mechanism
+                await context.Publish(new ProductsReservationFailedEvent 
                 { 
-                    OrderId = instance.CorrelationId,
+                    OrderId = saga.CorrelationId,
                     ErrorMessage = errorMessage
                 });
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error reserving products for order {OrderId}", instance.CorrelationId);
-            await context.Raise(new ProductsReservationFailedEvent 
+            _logger.LogError(ex, "Error reserving products for order {OrderId}", saga.CorrelationId);
+            // Use the state machine's event publishing mechanism
+            await context.Publish(new ProductsReservationFailedEvent 
             { 
-                OrderId = instance.CorrelationId,
+                OrderId = saga.CorrelationId,
                 ErrorMessage = ex.Message
             });
         }
@@ -164,68 +198,82 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
     // Send notification
     private async Task SendNotification(BehaviorContext<OrderSagaState, ProductsReservationSucceededEvent> context)
     {
-        var instance = context.Instance;
-        _logger.LogInformation("Products reserved successfully for order {OrderId}, notification already handled by NotificationService", instance.CorrelationId);
-        
+        var saga = context.Saga;
+        _logger.LogInformation("Products reserved successfully for order {OrderId}, notification already handled by NotificationService", saga.CorrelationId);
+
         // The notification is already handled by the NotificationService consuming the OrderCreated message
         // So we just need to simulate the notification success event
-        await context.Raise(new NotificationSucceededEvent { OrderId = instance.CorrelationId });
+        _logger.LogInformation("Publishing NotificationSucceededEvent for order {OrderId}", saga.CorrelationId);
+        await context.Publish(new NotificationSucceededEvent { OrderId = saga.CorrelationId });
     }
 
     // Complete the order
     private async Task CompleteOrder(BehaviorContext<OrderSagaState, NotificationSucceededEvent> context)
     {
-        var instance = context.Instance;
-        _logger.LogInformation("Completing order {OrderId}", instance.CorrelationId);
+        var saga = context.Saga;
+        _logger.LogInformation("Completing order {OrderId}", saga.CorrelationId);
 
         try
         {
             // Update the order status to Processed
-            var order = await _orderRepository.GetByIdAsync(instance.CorrelationId);
+            var order = await _orderRepository.GetByIdAsync(saga.CorrelationId);
             if (order != null)
             {
-                await _orderRepository.UpdateStatusAsync(instance.CorrelationId, OrderStatus.Processed);
-                _logger.LogInformation("Order {OrderId} completed successfully", instance.CorrelationId);
+                await _orderRepository.UpdateStatusAsync(saga.CorrelationId, OrderStatus.Processed);
+                _logger.LogInformation("Order {OrderId} completed successfully", saga.CorrelationId);
             }
             else
             {
-                _logger.LogWarning("Order {OrderId} not found when completing", instance.CorrelationId);
+                _logger.LogWarning("Order {OrderId} not found when completing", saga.CorrelationId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error completing order {OrderId}", instance.CorrelationId);
+            _logger.LogError(ex, "Error completing order {OrderId}", saga.CorrelationId);
         }
     }
 
     // Handle products reservation failure
-    private void HandleProductsReservationFailure(BehaviorContext<OrderSagaState, ProductsReservationFailedEvent> context)
+    private async Task HandleProductsReservationFailure(BehaviorContext<OrderSagaState, ProductsReservationFailedEvent> context)
     {
-        var instance = context.Instance;
+        var saga = context.Saga;
         var message = context.Message;
 
-        instance.ErrorMessage = message.ErrorMessage;
-        _logger.LogWarning("Products reservation failed for order {OrderId}: {ErrorMessage}", instance.CorrelationId, message.ErrorMessage);
+        saga.ErrorMessage = message.ErrorMessage;
+        _logger.LogWarning("Products reservation failed for order {OrderId}: {ErrorMessage}", saga.CorrelationId, message.ErrorMessage);
 
         // No need to compensate as no products were reserved
-        CancelOrder(instance.CorrelationId);
+        _logger.LogInformation("No products were reserved, proceeding to cancel order {OrderId}", saga.CorrelationId);
+        await CancelOrder(saga.CorrelationId);
+
+        // Publish the compensation succeeded event to complete the saga
+        await context.Publish(new CompensationSucceededEvent { OrderId = saga.CorrelationId });
+        _logger.LogInformation("Published CompensationSucceededEvent for order {OrderId}", saga.CorrelationId);
     }
 
     // Handle notification failure
-    private void HandleNotificationFailure(BehaviorContext<OrderSagaState, NotificationFailedEvent> context)
+    private async Task HandleNotificationFailure(BehaviorContext<OrderSagaState, NotificationFailedEvent> context)
     {
-        var instance = context.Instance;
+        var saga = context.Saga;
         var message = context.Message;
 
-        instance.ErrorMessage = message.ErrorMessage;
-        _logger.LogWarning("Notification failed for order {OrderId}: {ErrorMessage}", instance.CorrelationId, message.ErrorMessage);
+        saga.ErrorMessage = message.ErrorMessage;
+        _logger.LogWarning("Notification failed for order {OrderId}: {ErrorMessage}", saga.CorrelationId, message.ErrorMessage);
 
         // Need to compensate by releasing the reserved products
-        CompensateProductsReservation(instance.CorrelationId, instance.OrderItems);
+        _logger.LogInformation("Notification failed, need to compensate by releasing reserved products for order {OrderId}", saga.CorrelationId);
+        await CompensateProductsReservation(saga.CorrelationId, saga.OrderItems);
+
+        // Cancel the order
+        await CancelOrder(saga.CorrelationId);
+
+        // Publish the compensation succeeded event to complete the saga
+        await context.Publish(new CompensationSucceededEvent { OrderId = saga.CorrelationId });
+        _logger.LogInformation("Published CompensationSucceededEvent for order {OrderId}", saga.CorrelationId);
     }
 
     // Cancel the order
-    private async void CancelOrder(Guid orderId)
+    private async Task CancelOrder(Guid orderId)
     {
         _logger.LogInformation("Cancelling order {OrderId}", orderId);
 
@@ -234,15 +282,20 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
             // Update the order status to Cancelled
             await _orderRepository.UpdateStatusAsync(orderId, OrderStatus.Cancelled);
             _logger.LogInformation("Order {OrderId} cancelled", orderId);
+
+            // The CompensationSucceededEvent will be published by the caller
+            _logger.LogInformation("Order cancellation completed for {OrderId}", orderId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cancelling order {OrderId}", orderId);
+            // Even if there's an error, we consider the cancellation complete
+            _logger.LogInformation("Order cancellation completed for {OrderId} despite error", orderId);
         }
     }
 
     // Compensate products reservation
-    private async void CompensateProductsReservation(Guid orderId, System.Collections.Generic.List<CQRS.DTOs.OrderItemDto> items)
+    private async Task CompensateProductsReservation(Guid orderId, System.Collections.Generic.List<CQRS.DTOs.OrderItemDto> items)
     {
         _logger.LogInformation("Compensating products reservation for order {OrderId}", orderId);
 
@@ -259,6 +312,9 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
                 }).ToList()
             };
 
+            _logger.LogInformation("Sending release products request to ProductService for order {OrderId} with {ItemCount} items", 
+                orderId, command.Items.Count);
+
             // Send the command to the ProductService
             var client = _httpClientFactory.CreateClient("ProductService");
             var response = await client.PostAsJsonAsync("/api/products/release", command);
@@ -272,15 +328,10 @@ public class OrderSaga : MassTransitStateMachine<OrderSagaState>
                 var errorMessage = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("Failed to release products for order {OrderId}: {ErrorMessage}", orderId, errorMessage);
             }
-
-            // Cancel the order regardless of whether the products were released
-            CancelOrder(orderId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error releasing products for order {OrderId}", orderId);
-            // Cancel the order regardless of whether the products were released
-            CancelOrder(orderId);
         }
     }
 }
@@ -294,7 +345,7 @@ public class ProductsReservationSucceededEvent
 public class ProductsReservationFailedEvent
 {
     public Guid OrderId { get; set; }
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 
 public class NotificationSucceededEvent
@@ -305,7 +356,7 @@ public class NotificationSucceededEvent
 public class NotificationFailedEvent
 {
     public Guid OrderId { get; set; }
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }
 
 public class CompensationSucceededEvent

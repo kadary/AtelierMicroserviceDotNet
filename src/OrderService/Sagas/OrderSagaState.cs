@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MassTransit;
 using OrderService.CQRS.DTOs;
 using OrderService.Models;
 
@@ -8,7 +9,7 @@ namespace OrderService.Sagas;
 /// <summary>
 /// State for the OrderSaga
 /// </summary>
-public class OrderSagaState
+public class OrderSagaState : SagaStateMachineInstance, ISaga
 {
     /// <summary>
     /// Correlation ID for the saga (Order ID)
