@@ -136,10 +136,6 @@ services:
       - "8889:8889"   # Prometheus exporter
     networks:
       - microservices-network
-    depends_on:
-      - prometheus
-      - tempo
-      - loki
 
   # Prometheus (Metrics)
   prometheus:
