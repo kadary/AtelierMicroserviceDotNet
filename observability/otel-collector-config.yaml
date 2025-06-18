@@ -37,7 +37,7 @@ exporters:
     tls:
       insecure: true
 
-  logging:
+  debug:
     verbosity: detailed
 
 service:
@@ -45,12 +45,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [otlp/tempo, logging]
+      exporters: [otlp/tempo, debug]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [prometheus, logging]
+      exporters: [prometheus, debug]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [loki, logging]
+      exporters: [loki, debug]
