@@ -1,0 +1,63 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+
+  resource:
+    attributes:
+      - key: environment
+        value: production
+        action: upsert
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "microservices"
+    send_timestamps: true
+    metric_expiration: 180m
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    tenant_id: "microservices"
+    labels:
+      resource:
+        service.name: "service_name"
+        service.instance.id: "service_instance_id"
+      attributes:
+        level: "severity_text"
+
+  otlp/tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
+
+  logging:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [otlp/tempo, logging]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus, logging]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [loki, logging]

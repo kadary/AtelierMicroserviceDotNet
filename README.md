@@ -89,6 +89,8 @@ Cette architecture découplée permet une grande flexibilité et résilience. Si
 - **MassTransit** avec **RabbitMQ** pour la messagerie et l'orchestration des Sagas
 - **Swagger** pour la documentation des API
 - **Serilog** pour le logging structuré et centralisé
+- **OpenTelemetry** pour l'instrumentation et la collecte de télémétrie
+- **Grafana**, **Prometheus**, **Loki** et **Tempo** pour l'observabilité
 
 ## Sécurité avec IdentityServer et JWT
 
@@ -350,6 +352,68 @@ docker-compose logs -f
 ```bash
 docker-compose up -d
 ```
+
+## Observabilité
+
+Le projet intègre une stack complète d'observabilité pour surveiller, déboguer et optimiser les microservices en production.
+
+### Architecture d'Observabilité
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Microservices  │     │ OpenTelemetry   │     │    Backends     │
+│                 │     │   Collector     │     │                 │
+│  ┌───────────┐  │     │                 │     │  ┌───────────┐  │
+│  │ Serilog   │──┼────▶│                 │────▶│  │   Loki    │  │
+│  └───────────┘  │     │                 │     │  └───────────┘  │
+│                 │     │                 │     │                 │
+│  ┌───────────┐  │     │                 │     │  ┌───────────┐  │
+│  │ OpenTel   │──┼────▶│                 │────▶│  │Prometheus │  │
+│  │ Metrics   │  │     │                 │     │  └───────────┘  │
+│  └───────────┘  │     │                 │     │                 │
+│                 │     │                 │     │  ┌───────────┐  │
+│  ┌───────────┐  │     │                 │     │  │  Tempo    │  │
+│  │ OpenTel   │──┼────▶│                 │────▶│  │           │  │
+│  │ Traces    │  │     │                 │     │  └───────────┘  │
+│  └───────────┘  │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └────────┬────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │    Grafana      │
+                                                │  ┌───────────┐  │
+                                                │  │ Dashboards│  │
+                                                │  └───────────┘  │
+                                                └─────────────────┘
+```
+
+### Composants d'Observabilité
+
+1. **Collecte de Logs**
+   - Serilog est configuré pour envoyer des logs structurés vers Loki
+   - Les logs incluent des métadonnées comme le service, l'environnement et le niveau de sévérité
+
+2. **Métriques**
+   - OpenTelemetry collecte des métriques techniques (CPU, mémoire, latence HTTP)
+   - Les métriques sont exportées vers Prometheus
+   - Chaque microservice expose un endpoint `/metrics` pour le scraping Prometheus
+
+3. **Traces Distribuées**
+   - OpenTelemetry trace les requêtes à travers les différents microservices
+   - Les traces sont exportées vers Tempo
+   - Intégration avec MassTransit pour tracer les messages asynchrones
+
+4. **Visualisation**
+   - Grafana fournit des dashboards pour visualiser logs, métriques et traces
+   - Corrélation entre les différentes sources de données
+   - Alertes configurables basées sur les métriques et logs
+
+### Accès aux Interfaces
+
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090
+- **Loki**: http://localhost:3100
+- **Tempo**: http://localhost:3200
 
 ## Endpoints API
 

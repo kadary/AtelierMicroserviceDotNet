@@ -1,4 +1,5 @@
 using Serilog;
+using Serilog.Sinks.Grafana.Loki;
 using MassTransit;
 using OrderService.Models;
 using OrderService.Repositories;
@@ -13,6 +14,11 @@ using System.Reflection;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +26,20 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/order-service-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.GrafanaLoki(
+        "http://loki:3100",
+        labels: new[] { 
+            new LokiLabel { Key = "service", Value = "order-service" },
+            new LokiLabel { Key = "environment", Value = builder.Environment.EnvironmentName }
+        },
+        credentials: null,
+        batchPostingLimit: 1000,
+        queueLimit: 100000,
+        period: TimeSpan.FromSeconds(2),
+        textFormatter: new Serilog.Formatting.Json.JsonFormatter()
+    )
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "OrderService")
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -31,6 +50,73 @@ var logger = loggerFactory.CreateLogger<Program>();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure OpenTelemetry
+var serviceName = "order-service";
+var serviceVersion = "1.0.0";
+
+// Configure OpenTelemetry Resources
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+    .AddTelemetrySdk()
+    .AddEnvironmentVariableDetector();
+
+// Configure OpenTelemetry Tracing
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.EnrichWithHttpRequest = (activity, httpRequest) =>
+                {
+                    activity.SetTag("http.request.header.x-request-id", httpRequest.Headers["x-request-id"]);
+                };
+                options.EnrichWithHttpResponse = (activity, httpResponse) =>
+                {
+                    activity.SetTag("http.response.header.x-response-id", httpResponse.Headers["x-response-id"]);
+                };
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.EnrichWithHttpRequestMessage = (activity, request) =>
+                {
+                    if (request.Headers.Contains("x-request-id"))
+                    {
+                        activity.SetTag("http.request.header.x-request-id", request.Headers.GetValues("x-request-id").First());
+                    }
+                };
+                options.EnrichWithHttpResponseMessage = (activity, response) =>
+                {
+                    if (response.Headers.Contains("x-response-id"))
+                    {
+                        activity.SetTag("http.response.header.x-response-id", response.Headers.GetValues("x-response-id").First());
+                    }
+                };
+            })
+            .AddSource("MassTransit") // Add MassTransit as a source
+            .AddSource("MediatR") // Add MediatR as a source
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            })
+            .AddPrometheusExporter();
+    });
 
 // Configure JSON serialization options
 builder.Services.AddControllers()

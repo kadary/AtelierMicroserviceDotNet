@@ -1,9 +1,15 @@
 using Serilog;
+using Serilog.Sinks.Grafana.Loki;
 using ProductService.Models;
 using ProductService.Repositories;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,13 +17,69 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/product-service-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.GrafanaLoki(
+        "http://loki:3100",
+        labels: new[] { 
+            new LokiLabel { Key = "service", Value = "product-service" },
+            new LokiLabel { Key = "environment", Value = builder.Environment.EnvironmentName }
+        },
+        credentials: null,
+        batchPostingLimit: 1000,
+        queueLimit: 100000,
+        period: TimeSpan.FromSeconds(2),
+        textFormatter: new Serilog.Formatting.Json.JsonFormatter()
+    )
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "ProductService")
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure OpenTelemetry
+var serviceName = "product-service";
+var serviceVersion = "1.0.0";
+
+// Configure OpenTelemetry Resources
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+    .AddTelemetrySdk()
+    .AddEnvironmentVariableDetector();
+
+// Configure OpenTelemetry Tracing and Metrics
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            })
+            .AddPrometheusExporter();
+    });
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { 
