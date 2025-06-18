@@ -4,42 +4,43 @@ Ce projet sert d'atelier à la formation Microservices avec DotNet 8 dispensée 
 
 ## Architecture du Projet
 
-Le projet est composé de 4 composants principaux :
+Le projet est composé de 5 composants principaux :
 
 1. **ProductService** - Service permettant de créer et gérer des produits
 2. **OrderService** - Service permettant de créer des commandes et publier des événements
 3. **NotificationService** - Service consommant les événements pour envoyer des notifications
 4. **API Gateway (Ocelot)** - Passerelle API centralisant les requêtes
+5. **IdentityServer** - Service d'authentification et d'autorisation basé sur OAuth 2.0 et OpenID Connect
 
 ### Diagramme de Flux de Données
 
 ```
-┌─────────────┐     ┌─────────────────────┐     
-│             │     │                     │     
-│   Client    │────▶│    API Gateway      │     
-│             │     │     (Ocelot)        │     
-└─────────────┘     └─────────┬───────────┘     
-      HTTP/REST               │                  
-                              │                  
-                              │ HTTP/REST        
-                              │                  
-                 ┌────────────│───────────────────────────────────────────────┐
-                 │            │                                               │             
-                 ▼            ▼                                               │
-┌─────────────────┐    ┌─────────────────────────┐    ┌─────────────────┐     │
-│                 │    │      OrderService       │    │                 │     │
-│ ProductService  │◀───┤                         │───▶│    RabbitMQ     │     │
-│                 │    │  ┌─────────┐ ┌────────┐ │    │  Message Broker │     │
-└─────────────────┘    │  │ Commands│ │Queries │ │    └────────┬────────┘     │
-      ▲                │  └────┬────┘ └───┬────┘ │            │               │
-      │                │       │          │      │            │               │
-      │                │       ▼          ▼      │            │ AMQP          │
-      │                │  ┌─────────────────┐    │            │ (MassTransit) │ 
-      │                │  │     MediatR     │    │            │               │
-      │                │  └────────┬────────┘    │            ▼               │
-      │                │           │             │    ┌─────────────────┐     │
-      │                │      ┌────┴─────┐       │    │                 │     │
-      │                │      │  Sagas   │       │    │NotificationSvc  │ ◀───┘
+┌─────────────┐     ┌─────────────────────┐     ┌─────────────────┐
+│             │     │                     │     │                 │
+│   Client    │────▶│    API Gateway      │◀───▶│  IdentityServer │
+│             │     │     (Ocelot)        │     │                 │
+└─────────────┘     └─────────┬───────────┘     └─────────────────┘
+      HTTP/REST               │                             ▲  OAuth 2.0/OIDC
+                              │                             │
+                              │ HTTP/REST                   │ JWT Validation
+                              │ + JWT                       ▼ 
+                 ┌────────────│─────────────────────────────────────────────┐
+                 │            │                                             │             
+                 ▼            ▼                                             │
+┌─────────────────┐    ┌─────────────────────────┐    ┌─────────────────┐   │
+│                 │    │      OrderService       │    │                 │   │
+│ ProductService  │◀───┤                         │───▶│    RabbitMQ     │   │
+│                 │    │  ┌─────────┐ ┌────────┐ │    │  Message Broker │   │
+└─────────────────┘    │  │ Commands│ │Queries │ │    └────────┬────────┘   │
+      ▲                │  └────┬────┘ └───┬────┘ │            │             │
+      │                │       │          │      │            │             │
+      │                │       ▼          ▼      │            │ AMQP        │
+      │                │  ┌─────────────────┐    │            │ (MassTransit)│ 
+      │                │  │     MediatR     │    │            │             │
+      │                │  └────────┬────────┘    │            ▼             │
+      │                │           │             │    ┌─────────────────┐   │
+      │                │      ┌────┴─────┐       │    │                 │   │
+      │                │      │  Sagas   │       │    │NotificationSvc  │ ◀─┘
       │                │      └──────────┘       │    │                 │
       │                └─────────────────────────┘    └─────────────────┘
       │                       │
@@ -52,25 +53,27 @@ Le projet est composé de 4 composants principaux :
 
 1. **Client → API Gateway** : Les clients communiquent avec le système via l'API Gateway en utilisant le protocole HTTP/REST. L'API Gateway sert de point d'entrée unique pour toutes les requêtes.
 
-2. **API Gateway → Services** : L'API Gateway (Ocelot) route les requêtes vers les microservices appropriés (ProductService ou OrderService) en utilisant HTTP/REST.
+2. **Client → API Gateway → IdentityServer** : Pour les requêtes nécessitant une authentification, l'API Gateway vérifie la validité du token JWT auprès d'IdentityServer. Si aucun token n'est fourni ou si le token est invalide, la requête est rejetée avec une erreur 401 (Unauthorized) ou 403 (Forbidden).
 
-3. **OrderService (CQRS)** : À l'intérieur de l'OrderService, le pattern CQRS est implémenté :
+3. **API Gateway → Services** : L'API Gateway (Ocelot) route les requêtes vers les microservices appropriés (ProductService ou OrderService) en utilisant HTTP/REST. Les requêtes incluent le token JWT validé, qui est également vérifié par chaque microservice.
+
+4. **OrderService (CQRS)** : À l'intérieur de l'OrderService, le pattern CQRS est implémenté :
    - Les requêtes HTTP entrantes sont transformées en Commands (pour les opérations d'écriture) ou Queries (pour les opérations de lecture)
    - MediatR dispatche ces Commands/Queries vers les Handlers appropriés
    - Les Handlers exécutent la logique métier et interagissent avec le Repository
 
-4. **OrderService (SAGA)** : Pour les opérations qui nécessitent une coordination entre services :
+5. **OrderService (SAGA)** : Pour les opérations qui nécessitent une coordination entre services :
    - Après la création d'une commande, un OrderCreatedEvent est publié
    - La Saga orchestre le processus en suivant les étapes et en maintenant l'état dans OrderSagaState
    - En cas d'échec, des actions compensatoires sont exécutées pour maintenir la cohérence
 
-5. **OrderService → ProductService** : Lors de la création d'une commande, l'OrderService peut avoir besoin de vérifier les informations des produits auprès du ProductService. Cette communication utilise HTTP/REST avec Polly pour la résilience (retry, circuit breaker).
+6. **OrderService → ProductService** : Lors de la création d'une commande, l'OrderService peut avoir besoin de vérifier les informations des produits auprès du ProductService. Cette communication utilise HTTP/REST avec Polly pour la résilience (retry, circuit breaker).
 
-6. **OrderService → RabbitMQ** : Lorsqu'une commande est créée, l'OrderService publie des événements sur RabbitMQ en utilisant le protocole AMQP via MassTransit :
+7. **OrderService → RabbitMQ** : Lorsqu'une commande est créée, l'OrderService publie des événements sur RabbitMQ en utilisant le protocole AMQP via MassTransit :
    - `OrderCreatedEvent` pour la Saga interne
    - `OrderCreated` pour la notification externe
 
-7. **RabbitMQ → NotificationService** : Le NotificationService s'abonne aux événements `OrderCreated` sur RabbitMQ et les consomme via AMQP (MassTransit) pour envoyer des notifications par email.
+8. **RabbitMQ → NotificationService** : Le NotificationService s'abonne aux événements `OrderCreated` sur RabbitMQ et les consomme via AMQP (MassTransit) pour envoyer des notifications par email.
 
 Cette architecture découplée permet une grande flexibilité et résilience. Si un service est temporairement indisponible, les messages restent dans la file d'attente RabbitMQ et seront traités une fois le service rétabli. L'utilisation de CQRS et SAGA renforce cette résilience en permettant une meilleure séparation des préoccupations et une gestion robuste des transactions distribuées.
 
@@ -79,11 +82,80 @@ Cette architecture découplée permet une grande flexibilité et résilience. Si
 - **.NET 8** avec Minimal API
 - **Docker** et **Docker Compose** pour la conteneurisation
 - **Ocelot** comme API Gateway
+- **Duende IdentityServer** pour l'authentification et l'autorisation OAuth 2.0/OpenID Connect
+- **JWT** (JSON Web Tokens) pour la sécurisation des API
 - **Polly** pour la résilience
 - **MediatR** pour l'implémentation du pattern CQRS
 - **MassTransit** avec **RabbitMQ** pour la messagerie et l'orchestration des Sagas
 - **Swagger** pour la documentation des API
 - **Serilog** pour le logging structuré et centralisé
+
+## Sécurité avec IdentityServer et JWT
+
+Le projet implémente une couche de sécurité robuste basée sur OAuth 2.0 et OpenID Connect avec Duende IdentityServer, garantissant que seules les requêtes authentifiées et autorisées peuvent accéder aux ressources protégées.
+
+### Architecture de Sécurité
+
+- **IdentityServer** agit comme fournisseur d'identité (IdP) centralisé pour l'ensemble du système
+- **API Gateway** valide les tokens JWT et applique les politiques d'autorisation basées sur les scopes
+- **Microservices** vérifient également la validité des tokens JWT pour une sécurité en profondeur
+
+### Flux d'Authentification
+
+1. Le client obtient un token JWT auprès d'IdentityServer en utilisant le flux "Client Credentials"
+2. Le client inclut ce token dans l'en-tête Authorization de ses requêtes vers l'API Gateway
+3. L'API Gateway valide le token auprès d'IdentityServer et vérifie les scopes requis
+4. Si le token est valide et contient les scopes appropriés, la requête est transmise au microservice concerné
+5. Le microservice vérifie également le token avant de traiter la requête
+
+### Obtention d'un Token JWT
+
+Pour obtenir un token JWT, vous pouvez utiliser la commande curl suivante :
+
+```bash
+curl -X POST \
+  http://localhost:5004/connect/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials&client_id=api-gateway&client_secret=secret&scope=orders:write'
+```
+
+La réponse contiendra un token JWT que vous pourrez utiliser pour les requêtes ultérieures :
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkYyNjZCQzA5RkE5NTU3Q0JFRDhEOTg0NEYwRDVGMDVGIiwidHlwIjoiYXQrand0In0...",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "scope": "orders:write"
+}
+```
+
+### Utilisation du Token JWT
+
+Pour utiliser le token JWT dans vos requêtes, ajoutez-le dans l'en-tête Authorization :
+
+```bash
+curl -X GET \
+  http://localhost:8080/api/orders \
+  -H 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IkYyNjZCQzA5RkE5NTU3Q0JFRDhEOTg0NEYwRDVGMDVGIiwidHlwIjoiYXQrand0In0...'
+```
+
+### Scopes Disponibles
+
+Les scopes suivants sont configurés dans le système :
+
+- `orders:read` - Lecture des commandes
+- `orders:write` - Création et modification des commandes
+- `products:read` - Lecture des produits
+- `products:write` - Création et modification des produits
+
+### Sécurité en Profondeur
+
+Chaque couche du système applique des contrôles de sécurité :
+
+1. **API Gateway** - Première ligne de défense qui valide les tokens et applique les politiques d'autorisation
+2. **Microservices** - Seconde ligne de défense qui vérifie également les tokens
+3. **Communication directe bloquée** - Les microservices ne sont pas accessibles directement depuis l'extérieur, toutes les requêtes doivent passer par l'API Gateway
 
 ## Patterns de Conception Utilisés
 
@@ -287,6 +359,16 @@ Les endpoints détaillés sont disponibles via Swagger une fois les services dé
 - ProductService: http://localhost:5001/swagger
 - OrderService: http://localhost:5002/swagger
 - NotificationService: http://localhost:5003/swagger
+- IdentityServer: http://localhost:5004/.well-known/openid-configuration (Découverte OpenID Connect)
+
+### Endpoints IdentityServer
+
+IdentityServer expose plusieurs endpoints standards OAuth 2.0 et OpenID Connect :
+
+- **Discovery Document**: `http://localhost:5004/.well-known/openid-configuration`
+- **Token Endpoint**: `http://localhost:5004/connect/token` (pour obtenir un token JWT)
+- **Introspection Endpoint**: `http://localhost:5004/connect/introspect` (pour valider un token)
+- **Health Check**: `http://localhost:5004/health`
 
 ## Structure du Projet
 
@@ -303,7 +385,7 @@ Le projet est organisé comme suit :
 
 ### Répertoire `/src`
 
-Contient le code source de tous les microservices et de l'API Gateway.
+Contient le code source de tous les microservices, de l'API Gateway et d'IdentityServer.
 
 #### `/src/ProductService`
 
@@ -394,6 +476,25 @@ API Gateway qui centralise les requêtes vers les différents microservices.
   - `ApiGateway.http` - Fichiers de requêtes HTTP pour tester l'API Gateway
   - `/Properties/launchSettings.json` - Configuration des profils de lancement
 
+#### `/src/IdentityServer`
+
+Service d'authentification et d'autorisation basé sur OAuth 2.0 et OpenID Connect.
+
+- **Fichiers Principaux**:
+  - `IdentityServer.csproj` - Fichier projet .NET
+  - `Program.cs` - Point d'entrée de l'application et configuration d'IdentityServer
+  - `Dockerfile` - Instructions pour construire l'image Docker du service
+
+- **Configuration**:
+  - Configuration des clients, des ressources API, des scopes et des utilisateurs de test
+  - Génération de clés de signature pour les tokens JWT
+  - Exposition des endpoints OAuth 2.0 et OpenID Connect standards
+
+- **Fichiers de Configuration**:
+  - `appsettings.json` - Configuration générale de l'application
+  - `appsettings.Development.json` - Configuration spécifique à l'environnement de développement
+  - `/Properties/launchSettings.json` - Configuration des profils de lancement
+
 ### Répertoire `/logs`
 
 Contient les fichiers de logs générés par les différents services.
@@ -402,11 +503,12 @@ Contient les fichiers de logs générés par les différents services.
 - `order-service-*.txt` - Logs du OrderService
 - `notification-service-*.txt` - Logs du NotificationService
 - `api-gateway-*.txt` - Logs de l'API Gateway
+- `identity-server-*.txt` - Logs d'IdentityServer
 
 ### Fichiers Docker
 
 - `docker-compose.yml` - Définit les services, réseaux et volumes pour l'application complète
-  - Configure les 4 services (api-gateway, product-service, order-service, notification-service)
+  - Configure les 5 services (identity-server, api-gateway, product-service, order-service, notification-service)
   - Configure RabbitMQ pour la messagerie
   - Définit le réseau "microservices-network" pour la communication entre services
   - Configure les volumes pour la persistance des données et des logs
@@ -414,7 +516,8 @@ Contient les fichiers de logs générés par les différents services.
 - `.dockerignore` - Spécifie les fichiers à exclure lors de la construction des images Docker
 
 - Dockerfiles individuels dans chaque répertoire de service:
+  - `/src/IdentityServer/Dockerfile`
+  - `/src/ApiGateway/Dockerfile`
   - `/src/ProductService/Dockerfile`
   - `/src/OrderService/Dockerfile`
   - `/src/NotificationService/Dockerfile`
-  - `/src/ApiGateway/Dockerfile`

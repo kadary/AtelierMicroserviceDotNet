@@ -95,13 +95,18 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Use the existing logger
 logger.LogInformation("Starting NotificationService");
 
 // Notification endpoints
 var notificationsGroup = app.MapGroup("/api/notifications")
     .WithTags("Notifications")
-    .WithOpenApi();
+    .WithOpenApi()
+    .RequireAuthorization(); // Require authorization for all endpoints in this group
 
 // Get notification status
 notificationsGroup.MapGet("/status", () =>
