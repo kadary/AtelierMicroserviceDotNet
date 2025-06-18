@@ -591,6 +591,25 @@
           }
         }
       },
+      "OpenTelemetry.Exporter.Prometheus.AspNetCore/1.8.0-beta.1": {
+        "type": "package",
+        "dependencies": {
+          "OpenTelemetry": "1.8.0-beta.1"
+        },
+        "compile": {
+          "lib/net8.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.dll": {
+            "related": ".xml"
+          }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
+      },
       "OpenTelemetry.Extensions.Hosting/1.7.0": {
         "type": "package",
         "dependencies": {
@@ -2113,6 +2132,24 @@
         "opentelemetry.exporter.opentelemetryprotocol.nuspec"
       ]
     },
+    "OpenTelemetry.Exporter.Prometheus.AspNetCore/1.8.0-beta.1": {
+      "sha512": "tvwcbxZFH6R2yf6jrKHaWzRuKn/IHB2W5+kOhI1RO6XVb5vQeJhXWkfR15o8Kl48phsDVE85t1If75V1DPkzfg==",
+      "type": "package",
+      "path": "opentelemetry.exporter.prometheus.aspnetcore/1.8.0-beta.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net6.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.dll",
+        "lib/net6.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.xml",
+        "lib/net8.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.dll",
+        "lib/net8.0/OpenTelemetry.Exporter.Prometheus.AspNetCore.xml",
+        "opentelemetry-icon-color.png",
+        "opentelemetry.exporter.prometheus.aspnetcore.1.8.0-beta.1.nupkg.sha512",
+        "opentelemetry.exporter.prometheus.aspnetcore.nuspec"
+      ]
+    },
     "OpenTelemetry.Extensions.Hosting/1.7.0": {
       "sha512": "MbB7CWWqb7xHK0jTF9Gtvw/eLWdaKqzkE1XAwLe05xyskHuwJWAbZFax4nGLA71YkMWQNO5iPIBlirvYXOLMlg==",
       "type": "package",
@@ -2725,7 +2762,7 @@
       "Microsoft.AspNetCore.OpenApi >= 8.0.17",
       "OpenTelemetry >= 1.7.0",
       "OpenTelemetry.Exporter.OpenTelemetryProtocol >= 1.7.0",
-      "OpenTelemetry.Exporter.Prometheus.AspNetCore >= 1.7.0",
+      "OpenTelemetry.Exporter.Prometheus.AspNetCore >= 1.8.0-beta.1",
       "OpenTelemetry.Extensions.Hosting >= 1.7.0",
       "OpenTelemetry.Instrumentation.AspNetCore >= 1.7.0",
       "OpenTelemetry.Instrumentation.Http >= 1.7.0",
@@ -2798,7 +2835,7 @@
           },
           "OpenTelemetry.Exporter.Prometheus.AspNetCore": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Extensions.Hosting": {
             "target": "Package",
@@ -2862,15 +2899,6 @@
   },
   "logs": [
     {
-      "code": "NU1103",
-      "level": "Error",
-      "message": "Unable to find a stable package OpenTelemetry.Exporter.Prometheus.AspNetCore with version (>= 1.7.0)\n  - Found 24 version(s) in nuget.org [ Nearest version: 1.8.0-beta.1 ]",
-      "libraryId": "OpenTelemetry.Exporter.Prometheus.AspNetCore",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    },
-    {
       "code": "NU1902",
       "level": "Warning",
       "warningLevel": 1,
@@ -2886,6 +2914,15 @@
       "warningLevel": 1,
       "message": "Package 'OpenTelemetry.Instrumentation.Http' 1.7.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
       "libraryId": "OpenTelemetry.Instrumentation.Http",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Warning As Error: Detected package downgrade: OpenTelemetry from 1.8.0-beta.1 to 1.7.0. Reference the package directly from the project to select a different version. \n ProductService -> OpenTelemetry.Exporter.Prometheus.AspNetCore 1.8.0-beta.1 -> OpenTelemetry (>= 1.8.0-beta.1) \n ProductService -> OpenTelemetry (>= 1.7.0)",
+      "libraryId": "OpenTelemetry",
       "targetGraphs": [
         "net8.0"
       ]

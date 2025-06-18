@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "2YMiNYaheA4=",
+  "dgSpecHash": "tjksCxpmyVA=",
   "success": false,
   "projectFilePath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
   "expectedPackageFiles": [
@@ -37,6 +37,7 @@
     "/Users/demkada/.nuget/packages/opentelemetry.api/1.7.0/opentelemetry.api.1.7.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/opentelemetry.api.providerbuilderextensions/1.7.0/opentelemetry.api.providerbuilderextensions.1.7.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/opentelemetry.exporter.opentelemetryprotocol/1.7.0/opentelemetry.exporter.opentelemetryprotocol.1.7.0.nupkg.sha512",
+    "/Users/demkada/.nuget/packages/opentelemetry.exporter.prometheus.aspnetcore/1.8.0-beta.1/opentelemetry.exporter.prometheus.aspnetcore.1.8.0-beta.1.nupkg.sha512",
     "/Users/demkada/.nuget/packages/opentelemetry.extensions.hosting/1.7.0/opentelemetry.extensions.hosting.1.7.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/opentelemetry.instrumentation.aspnetcore/1.7.0/opentelemetry.instrumentation.aspnetcore.1.7.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/opentelemetry.instrumentation.http/1.7.0/opentelemetry.instrumentation.http.1.7.0.nupkg.sha512",
@@ -63,17 +64,6 @@
   ],
   "logs": [
     {
-      "code": "NU1103",
-      "level": "Error",
-      "message": "Unable to find a stable package OpenTelemetry.Exporter.Prometheus.AspNetCore with version (>= 1.7.0)\n  - Found 24 version(s) in nuget.org [ Nearest version: 1.8.0-beta.1 ]",
-      "projectPath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
-      "filePath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
-      "libraryId": "OpenTelemetry.Exporter.Prometheus.AspNetCore",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    },
-    {
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'OpenTelemetry.Instrumentation.AspNetCore' 1.7.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
@@ -93,6 +83,17 @@
       "warningLevel": 1,
       "filePath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
       "libraryId": "OpenTelemetry.Instrumentation.Http",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Warning As Error: Detected package downgrade: OpenTelemetry from 1.8.0-beta.1 to 1.7.0. Reference the package directly from the project to select a different version. \n ProductService -> OpenTelemetry.Exporter.Prometheus.AspNetCore 1.8.0-beta.1 -> OpenTelemetry (>= 1.8.0-beta.1) \n ProductService -> OpenTelemetry (>= 1.7.0)",
+      "projectPath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
+      "filePath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
+      "libraryId": "OpenTelemetry",
       "targetGraphs": [
         "net8.0"
       ]
