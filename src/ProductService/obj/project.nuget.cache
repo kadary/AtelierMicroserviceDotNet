@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "krJuFeX3134=",
+  "dgSpecHash": "FFrRNUwOuKg=",
   "success": true,
   "projectFilePath": "/Users/demkada/projects/AtelierMicroserviceDotNet/src/ProductService/ProductService.csproj",
   "expectedPackageFiles": [
@@ -52,6 +52,8 @@
     "/Users/demkada/.nuget/packages/serilog.sinks.debug/2.0.0/serilog.sinks.debug.2.0.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/serilog.sinks.file/5.0.0/serilog.sinks.file.5.0.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/serilog.sinks.grafana.loki/8.2.0/serilog.sinks.grafana.loki.8.2.0.nupkg.sha512",
+    "/Users/demkada/.nuget/packages/serilog.sinks.opentelemetry/1.0.0/serilog.sinks.opentelemetry.1.0.0.nupkg.sha512",
+    "/Users/demkada/.nuget/packages/serilog.sinks.periodicbatching/3.1.0/serilog.sinks.periodicbatching.3.1.0.nupkg.sha512",
     "/Users/demkada/.nuget/packages/swashbuckle.aspnetcore/6.6.2/swashbuckle.aspnetcore.6.6.2.nupkg.sha512",
     "/Users/demkada/.nuget/packages/swashbuckle.aspnetcore.swagger/6.6.2/swashbuckle.aspnetcore.swagger.6.6.2.nupkg.sha512",
     "/Users/demkada/.nuget/packages/swashbuckle.aspnetcore.swaggergen/6.6.2/swashbuckle.aspnetcore.swaggergen.6.6.2.nupkg.sha512",

@@ -1219,6 +1219,41 @@
           }
         }
       },
+      "Serilog.Sinks.OpenTelemetry/1.0.0": {
+        "type": "package",
+        "dependencies": {
+          "Google.Protobuf": "3.21.11",
+          "Grpc.Net.Client": "2.50.0",
+          "Serilog": "2.12.0",
+          "Serilog.Sinks.PeriodicBatching": "3.1.0"
+        },
+        "compile": {
+          "lib/net6.0/Serilog.Sinks.OpenTelemetry.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Serilog.Sinks.OpenTelemetry.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Serilog.Sinks.PeriodicBatching/3.1.0": {
+        "type": "package",
+        "dependencies": {
+          "Serilog": "2.0.0"
+        },
+        "compile": {
+          "lib/netstandard2.1/Serilog.Sinks.PeriodicBatching.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.1/Serilog.Sinks.PeriodicBatching.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Swashbuckle.AspNetCore/6.6.2": {
         "type": "package",
         "dependencies": {
@@ -3318,6 +3353,48 @@
         "serilog.sinks.grafana.loki.nuspec"
       ]
     },
+    "Serilog.Sinks.OpenTelemetry/1.0.0": {
+      "sha512": "m97ksQxTSyityem9nISRZU3f2nZ6Vca2myvmL1Yh8nWPsnuUSwSmb4JvlJVjUPPu/rZSyvIrksdFeRtjAmeGGg==",
+      "type": "package",
+      "path": "serilog.sinks.opentelemetry/1.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net462/Serilog.Sinks.OpenTelemetry.dll",
+        "lib/net462/Serilog.Sinks.OpenTelemetry.xml",
+        "lib/net6.0/Serilog.Sinks.OpenTelemetry.dll",
+        "lib/net6.0/Serilog.Sinks.OpenTelemetry.xml",
+        "lib/netstandard2.0/Serilog.Sinks.OpenTelemetry.dll",
+        "lib/netstandard2.0/Serilog.Sinks.OpenTelemetry.xml",
+        "lib/netstandard2.1/Serilog.Sinks.OpenTelemetry.dll",
+        "lib/netstandard2.1/Serilog.Sinks.OpenTelemetry.xml",
+        "serilog-sink-nuget.png",
+        "serilog.sinks.opentelemetry.1.0.0.nupkg.sha512",
+        "serilog.sinks.opentelemetry.nuspec"
+      ]
+    },
+    "Serilog.Sinks.PeriodicBatching/3.1.0": {
+      "sha512": "NDWR7m3PalVlGEq3rzoktrXikjFMLmpwF0HI4sowo8YDdU+gqPlTHlDQiOGxHfB0sTfjPA9JjA7ctKG9zqjGkw==",
+      "type": "package",
+      "path": "serilog.sinks.periodicbatching/3.1.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "icon.png",
+        "lib/net45/Serilog.Sinks.PeriodicBatching.dll",
+        "lib/net45/Serilog.Sinks.PeriodicBatching.xml",
+        "lib/netstandard1.1/Serilog.Sinks.PeriodicBatching.dll",
+        "lib/netstandard1.1/Serilog.Sinks.PeriodicBatching.xml",
+        "lib/netstandard1.2/Serilog.Sinks.PeriodicBatching.dll",
+        "lib/netstandard1.2/Serilog.Sinks.PeriodicBatching.xml",
+        "lib/netstandard2.0/Serilog.Sinks.PeriodicBatching.dll",
+        "lib/netstandard2.0/Serilog.Sinks.PeriodicBatching.xml",
+        "lib/netstandard2.1/Serilog.Sinks.PeriodicBatching.dll",
+        "lib/netstandard2.1/Serilog.Sinks.PeriodicBatching.xml",
+        "serilog.sinks.periodicbatching.3.1.0.nupkg.sha512",
+        "serilog.sinks.periodicbatching.nuspec"
+      ]
+    },
     "Swashbuckle.AspNetCore/6.6.2": {
       "sha512": "+NB4UYVYN6AhDSjW0IJAd1AGD8V33gemFNLPaxKTtPkHB+HaKAKf9MGAEUPivEWvqeQfcKIw8lJaHq6LHljRuw==",
       "type": "package",
@@ -3769,6 +3846,7 @@
       "Serilog.Sinks.Console >= 5.0.1",
       "Serilog.Sinks.File >= 5.0.0",
       "Serilog.Sinks.Grafana.Loki >= 8.2.0",
+      "Serilog.Sinks.OpenTelemetry >= 1.0.0",
       "Swashbuckle.AspNetCore >= 6.6.2"
     ]
   },
@@ -3890,6 +3968,10 @@
           "Serilog.Sinks.Grafana.Loki": {
             "target": "Package",
             "version": "[8.2.0, )"
+          },
+          "Serilog.Sinks.OpenTelemetry": {
+            "target": "Package",
+            "version": "[1.0.0, )"
           },
           "Swashbuckle.AspNetCore": {
             "target": "Package",

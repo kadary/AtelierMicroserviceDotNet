@@ -364,11 +364,13 @@ Le projet intègre une stack complète d'observabilité pour surveiller, débogu
 │  Microservices  │     │ OpenTelemetry   │     │    Backends     │
 │                 │     │   Collector     │     │                 │
 │  ┌───────────┐  │     │                 │     │  ┌───────────┐  │
-│  │ Serilog   │──┼────▶│                 │────▶│  │   Loki    │  │
-│  └───────────┘  │     │                 │     │  └───────────┘  │
-│                 │     │                 │     │                 │
-│  ┌───────────┐  │     │                 │     │  ┌───────────┐  │
-│  │ OpenTel   │──┼────▶│                 │────▶│  │Prometheus │  │
+│  │ Serilog   │  │     │                 │     │  │   Loki    │  │
+│  │ with OTLP │──┼────▶│                 │────▶│  │           │  │
+│  │  Sink     │  │     │                 │     │  └───────────┘  │
+│  └───────────┘  │     │                 │     │                 │
+│                 │     │                 │     │  ┌───────────┐  │
+│  ┌───────────┐  │     │                 │     │  │Prometheus │  │
+│  │ OpenTel   │──┼────▶│                 │────▶│  │           │  │
 │  │ Metrics   │  │     │                 │     │  └───────────┘  │
 │  └───────────┘  │     │                 │     │                 │
 │                 │     │                 │     │  ┌───────────┐  │
@@ -390,17 +392,19 @@ Le projet intègre une stack complète d'observabilité pour surveiller, débogu
 ### Composants d'Observabilité
 
 1. **Collecte de Logs**
-   - Serilog est configuré pour envoyer des logs structurés vers Loki
+   - Serilog est configuré avec le sink OpenTelemetry pour envoyer des logs structurés au collecteur OpenTelemetry
+   - Le collecteur OpenTelemetry transmet ensuite les logs à Loki
    - Les logs incluent des métadonnées comme le service, l'environnement et le niveau de sévérité
 
 2. **Métriques**
    - OpenTelemetry collecte des métriques techniques (CPU, mémoire, latence HTTP)
-   - Les métriques sont exportées vers Prometheus
-   - Chaque microservice expose un endpoint `/metrics` pour le scraping Prometheus
+   - Les métriques sont exportées uniquement vers le collecteur OpenTelemetry
+   - Le collecteur OpenTelemetry transmet ensuite les métriques à Prometheus
 
 3. **Traces Distribuées**
    - OpenTelemetry trace les requêtes à travers les différents microservices
-   - Les traces sont exportées vers Tempo
+   - Les traces sont exportées vers le collecteur OpenTelemetry
+   - Le collecteur OpenTelemetry transmet ensuite les traces à Tempo
    - Intégration avec MassTransit pour tracer les messages asynchrones
 
 4. **Visualisation**
@@ -479,16 +483,19 @@ Pour tester et visualiser les métriques, traces et logs dans Grafana, suivez ce
    - Taux de requêtes HTTP : `rate(http_server_duration_count[5m])`
    - Durée moyenne des requêtes : `rate(http_server_duration_sum[5m]) / rate(http_server_duration_count[5m])`
    - Utilisation CPU : `process_cpu_seconds_total`
+   - Toutes les métriques sont collectées par le collecteur OpenTelemetry et exportées vers Prometheus
 
 2. **Requêtes Loki** :
    - Tous les logs d'erreur : `{job=~".+"} |= "error" | logfmt`
    - Logs par service : `{service="order-service"}`
    - Logs avec durée élevée : `{job=~".+"} |= "duration" | duration > 500ms`
+   - Tous les logs sont envoyés via Serilog avec le sink OpenTelemetry au collecteur, puis transmis à Loki
 
 3. **Requêtes Tempo** :
    - Traces par service : `service.name="order-service"`
    - Traces avec erreurs : `status.code=ERROR`
    - Traces longues : `duration > 100ms`
+   - Toutes les traces sont collectées par OpenTelemetry, envoyées au collecteur, puis transmises à Tempo
 
 ## Endpoints API
 

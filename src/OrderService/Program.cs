@@ -1,5 +1,5 @@
 using Serilog;
-using Serilog.Sinks.Grafana.Loki;
+using Serilog.Sinks.OpenTelemetry;
 using MassTransit;
 using OrderService.Models;
 using OrderService.Repositories;
@@ -26,18 +26,16 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/order-service-.txt", rollingInterval: RollingInterval.Day)
-    .WriteTo.GrafanaLoki(
-        "http://loki:3100",
-        labels: new[] { 
-            new LokiLabel { Key = "service", Value = "order-service" },
-            new LokiLabel { Key = "environment", Value = builder.Environment.EnvironmentName }
-        },
-        credentials: null,
-        batchPostingLimit: 1000,
-        queueLimit: 100000,
-        period: TimeSpan.FromSeconds(2),
-        textFormatter: new Serilog.Formatting.Json.JsonFormatter()
-    )
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = "http://otel-collector:4317";
+        options.Protocol = OtlpProtocol.Grpc;
+        options.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = "order-service",
+            ["service.environment"] = builder.Environment.EnvironmentName
+        };
+    })
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Service", "OrderService")
     .CreateLogger();
@@ -114,8 +112,7 @@ builder.Services.AddOpenTelemetry()
             .AddOtlpExporter(options =>
             {
                 options.Endpoint = new Uri("http://otel-collector:4317");
-            })
-            .AddPrometheusExporter();
+            });
     });
 
 // Configure JSON serialization options

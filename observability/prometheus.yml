@@ -12,28 +12,3 @@ scrape_configs:
       - targets: ['otel-collector:8889']
     honor_labels: true
     metrics_path: /metrics
-
-  - job_name: 'identity-server'
-    static_configs:
-      - targets: ['identity-server:5004']
-    metrics_path: /metrics
-
-  - job_name: 'api-gateway'
-    static_configs:
-      - targets: ['api-gateway:5000']
-    metrics_path: /metrics
-
-  - job_name: 'product-service'
-    static_configs:
-      - targets: ['product-service:5001']
-    metrics_path: /metrics
-
-  - job_name: 'order-service'
-    static_configs:
-      - targets: ['order-service:5002']
-    metrics_path: /metrics
-
-  - job_name: 'notification-service'
-    static_configs:
-      - targets: ['notification-service:5003']
-    metrics_path: /metrics

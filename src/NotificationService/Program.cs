@@ -1,10 +1,16 @@
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 using MassTransit;
 using NotificationService.Consumers;
 using NotificationService.Services;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +18,64 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/notification-service-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = "http://otel-collector:4317";
+        options.Protocol = OtlpProtocol.Grpc;
+        options.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = "notification-service",
+            ["service.environment"] = builder.Environment.EnvironmentName
+        };
+    })
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "NotificationService")
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Configure OpenTelemetry
+var serviceName = "notification-service";
+var serviceVersion = "1.0.0";
+
+// Configure OpenTelemetry Resources
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+    .AddTelemetrySdk()
+    .AddEnvironmentVariableDetector();
+
+// Configure OpenTelemetry Tracing and Metrics
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddSource("MassTransit") // Add MassTransit as a source
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    });
 
 // Create logger for startup configuration
 var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog());

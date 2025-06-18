@@ -1,8 +1,14 @@
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,10 +16,85 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/api-gateway-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = "http://otel-collector:4317";
+        options.Protocol = OtlpProtocol.Grpc;
+        options.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = "api-gateway",
+            ["service.environment"] = builder.Environment.EnvironmentName
+        };
+    })
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "ApiGateway")
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Configure OpenTelemetry
+var serviceName = "api-gateway";
+var serviceVersion = "1.0.0";
+
+// Configure OpenTelemetry Resources
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+    .AddTelemetrySdk()
+    .AddEnvironmentVariableDetector();
+
+// Configure OpenTelemetry Tracing and Metrics
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.EnrichWithHttpRequest = (activity, httpRequest) =>
+                {
+                    activity.SetTag("http.request.header.x-request-id", httpRequest.Headers["x-request-id"]);
+                };
+                options.EnrichWithHttpResponse = (activity, httpResponse) =>
+                {
+                    activity.SetTag("http.response.header.x-response-id", httpResponse.Headers["x-response-id"]);
+                };
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.EnrichWithHttpRequestMessage = (activity, request) =>
+                {
+                    if (request.Headers.Contains("x-request-id"))
+                    {
+                        activity.SetTag("http.request.header.x-request-id", request.Headers.GetValues("x-request-id").First());
+                    }
+                };
+                options.EnrichWithHttpResponseMessage = (activity, response) =>
+                {
+                    if (response.Headers.Contains("x-response-id"))
+                    {
+                        activity.SetTag("http.response.header.x-response-id", response.Headers.GetValues("x-response-id").First());
+                    }
+                };
+            })
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    });
 
 // Add Ocelot configuration file
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
