@@ -415,6 +415,81 @@ Le projet intègre une stack complète d'observabilité pour surveiller, débogu
 - **Loki**: http://localhost:3100
 - **Tempo**: http://localhost:3200 (UI), http://localhost:4319 (OTLP gRPC)
 
+### Comment Tester et Visualiser l'Observabilité
+
+Pour tester et visualiser les métriques, traces et logs dans Grafana, suivez ces étapes :
+
+#### Génération de Données d'Observabilité
+
+1. **Générer des Métriques et Traces** :
+   ```bash
+   # Créer un produit (génère des métriques et traces)
+   curl -X POST http://localhost:5001/api/products \
+     -H "Content-Type: application/json" \
+     -d '{"name":"Produit Test","description":"Description du produit","price":19.99,"stockQuantity":100}'
+
+   # Obtenir la liste des produits (génère des métriques et traces)
+   curl http://localhost:5001/api/products
+   ```
+
+2. **Générer des Logs** :
+   ```bash
+   # Créer une commande (génère des logs dans OrderService)
+   curl -X POST http://localhost:5002/api/orders \
+     -H "Content-Type: application/json" \
+     -d '{"customerId":"00000000-0000-0000-0000-000000000001","items":[{"productId":"PRODUCT_ID_HERE","quantity":2,"price":19.99}]}'
+   ```
+
+#### Visualisation dans Grafana
+
+1. **Accéder à Grafana** :
+   - Ouvrez votre navigateur et accédez à http://localhost:3000
+   - Connectez-vous avec les identifiants par défaut (admin/admin)
+
+2. **Visualiser les Métriques** :
+   - Dans le menu latéral, cliquez sur "Dashboards" > "Browse"
+   - Sélectionnez le dossier "Microservices"
+   - Ouvrez le dashboard "Microservices Dashboard"
+   - Consultez les panneaux "HTTP Request Duration" et "HTTP Request Rate" pour voir les métriques de performance
+
+3. **Visualiser les Logs** :
+   - Dans le même dashboard, faites défiler jusqu'au panneau "Logs"
+   - Vous pouvez filtrer les logs par service en utilisant la requête : `{service="product-service"}` ou `{service="order-service"}`
+   - Pour rechercher des logs spécifiques, ajoutez des termes de recherche : `{service="order-service"} |= "commande créée"`
+
+4. **Visualiser les Traces** :
+   - Dans le même dashboard, faites défiler jusqu'au panneau "Traces"
+   - Cliquez sur une trace pour voir le détail des spans
+   - Vous pouvez voir la durée de chaque opération et les relations entre les services
+
+5. **Explorer les Données Brutes** :
+   - Dans le menu latéral, cliquez sur "Explore"
+   - Sélectionnez la source de données "Prometheus" pour explorer les métriques
+   - Sélectionnez "Loki" pour explorer les logs
+   - Sélectionnez "Tempo" pour explorer les traces
+
+6. **Corrélation entre Logs et Traces** :
+   - Dans une vue de logs, cliquez sur un log contenant un ID de trace
+   - Grafana vous permettra de naviguer directement vers la trace correspondante
+   - Inversement, dans une vue de trace, vous pouvez accéder aux logs associés
+
+#### Requêtes Utiles
+
+1. **Métriques Prometheus** :
+   - Taux de requêtes HTTP : `rate(http_server_duration_count[5m])`
+   - Durée moyenne des requêtes : `rate(http_server_duration_sum[5m]) / rate(http_server_duration_count[5m])`
+   - Utilisation CPU : `process_cpu_seconds_total`
+
+2. **Requêtes Loki** :
+   - Tous les logs d'erreur : `{job=~".+"} |= "error" | logfmt`
+   - Logs par service : `{service="order-service"}`
+   - Logs avec durée élevée : `{job=~".+"} |= "duration" | duration > 500ms`
+
+3. **Requêtes Tempo** :
+   - Traces par service : `service.name="order-service"`
+   - Traces avec erreurs : `status.code=ERROR`
+   - Traces longues : `duration > 100ms`
+
 ## Endpoints API
 
 Les endpoints détaillés sont disponibles via Swagger une fois les services démarrés :

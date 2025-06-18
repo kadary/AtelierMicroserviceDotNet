@@ -166,6 +166,7 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    user: root
     volumes:
       - ./observability/loki-config.yaml:/etc/loki/local-config.yaml
     networks:
