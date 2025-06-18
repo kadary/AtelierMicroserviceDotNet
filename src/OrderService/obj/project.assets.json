@@ -823,12 +823,12 @@
           }
         }
       },
-      "OpenTelemetry/1.7.0": {
+      "OpenTelemetry/1.8.0-beta.1": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.Logging": "8.0.0",
+          "Microsoft.Extensions.Diagnostics.Abstractions": "8.0.0",
           "Microsoft.Extensions.Logging.Configuration": "8.0.0",
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.7.0"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.8.0-beta.1"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.dll": {
@@ -841,7 +841,7 @@
           }
         }
       },
-      "OpenTelemetry.Api/1.7.0": {
+      "OpenTelemetry.Api/1.8.0": {
         "type": "package",
         "dependencies": {
           "System.Diagnostics.DiagnosticSource": "8.0.0"
@@ -857,11 +857,11 @@
           }
         }
       },
-      "OpenTelemetry.Api.ProviderBuilderExtensions/1.7.0": {
+      "OpenTelemetry.Api.ProviderBuilderExtensions/1.8.0": {
         "type": "package",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
-          "OpenTelemetry.Api": "1.7.0"
+          "OpenTelemetry.Api": "1.8.0"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.Api.ProviderBuilderExtensions.dll": {
@@ -874,12 +874,12 @@
           }
         }
       },
-      "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.7.0": {
+      "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.8.0-beta.1": {
         "type": "package",
         "dependencies": {
           "Google.Protobuf": "[3.22.5, 4.0.0)",
           "Grpc.Net.Client": "[2.52.0, 3.0.0)",
-          "OpenTelemetry": "1.7.0"
+          "OpenTelemetry": "1.8.0-beta.1"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.Exporter.OpenTelemetryProtocol.dll": {
@@ -911,12 +911,11 @@
           "Microsoft.AspNetCore.App"
         ]
       },
-      "OpenTelemetry.Extensions.Hosting/1.7.0": {
+      "OpenTelemetry.Extensions.Hosting/1.8.0-beta.1": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.Diagnostics.Abstractions": "8.0.0",
           "Microsoft.Extensions.Hosting.Abstractions": "8.0.0",
-          "OpenTelemetry": "1.7.0"
+          "OpenTelemetry": "1.8.0-beta.1"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.Extensions.Hosting.dll": {
@@ -929,10 +928,10 @@
           }
         }
       },
-      "OpenTelemetry.Instrumentation.AspNetCore/1.7.0": {
+      "OpenTelemetry.Instrumentation.AspNetCore/1.8.0": {
         "type": "package",
         "dependencies": {
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.7.0"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.8.0"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.Instrumentation.AspNetCore.dll": {
@@ -948,11 +947,11 @@
           "Microsoft.AspNetCore.App"
         ]
       },
-      "OpenTelemetry.Instrumentation.Http/1.7.0": {
+      "OpenTelemetry.Instrumentation.Http/1.8.0": {
         "type": "package",
         "dependencies": {
           "Microsoft.Extensions.Options": "8.0.0",
-          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.7.0"
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.8.0"
         },
         "compile": {
           "lib/net8.0/OpenTelemetry.Instrumentation.Http.dll": {
@@ -965,10 +964,10 @@
           }
         }
       },
-      "OpenTelemetry.Instrumentation.Runtime/1.7.0": {
+      "OpenTelemetry.Instrumentation.Runtime/1.8.0": {
         "type": "package",
         "dependencies": {
-          "OpenTelemetry.Api": "[1.7.0, 2.0.0)"
+          "OpenTelemetry.Api": "[1.8.0, 2.0.0)"
         },
         "compile": {
           "lib/net6.0/OpenTelemetry.Instrumentation.Runtime.dll": {
@@ -2800,13 +2799,15 @@
         "microsoft.openapi.nuspec"
       ]
     },
-    "OpenTelemetry/1.7.0": {
-      "sha512": "HNmOJg++4FtEJGCIn1dCJcDkHRLNuLKU047owrGXUOfz/C/c5oZHOPKrowKVOy2jOOh/F9+HDshzeOk5NnQEZg==",
+    "OpenTelemetry/1.8.0-beta.1": {
+      "sha512": "kHmAW8OAk7CQhdIWUstwp3jT474nbC2y0ppx3KRVOvEc6k/sXyW0I4pwod3IwmhG45YxBK2D+d50D4BAF7J4ag==",
       "type": "package",
-      "path": "opentelemetry/1.7.0",
+      "path": "opentelemetry/1.8.0-beta.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.dll",
         "lib/net462/OpenTelemetry.xml",
         "lib/net6.0/OpenTelemetry.dll",
@@ -2818,17 +2819,19 @@
         "lib/netstandard2.1/OpenTelemetry.dll",
         "lib/netstandard2.1/OpenTelemetry.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.1.7.0.nupkg.sha512",
+        "opentelemetry.1.8.0-beta.1.nupkg.sha512",
         "opentelemetry.nuspec"
       ]
     },
-    "OpenTelemetry.Api/1.7.0": {
-      "sha512": "w5uDHl1Nm7R5igWu1QjewpdPzJSavua8NTI3+iThOdRNHD3cabox8JeIJ8LpBSXGHARSNFMJZ/Xr5EGRinMTMg==",
+    "OpenTelemetry.Api/1.8.0": {
+      "sha512": "+daN4OqIXne3QLlFHEzb6ybAETgKs7Hg5jINYT5P8p8A/cEtuP6CRDYdDpOe6AlW8oAaV/nJJ5tLyPUVKKQu0w==",
       "type": "package",
-      "path": "opentelemetry.api/1.7.0",
+      "path": "opentelemetry.api/1.8.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.Api.dll",
         "lib/net462/OpenTelemetry.Api.xml",
         "lib/net6.0/OpenTelemetry.Api.dll",
@@ -2838,17 +2841,19 @@
         "lib/netstandard2.0/OpenTelemetry.Api.dll",
         "lib/netstandard2.0/OpenTelemetry.Api.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.api.1.7.0.nupkg.sha512",
+        "opentelemetry.api.1.8.0.nupkg.sha512",
         "opentelemetry.api.nuspec"
       ]
     },
-    "OpenTelemetry.Api.ProviderBuilderExtensions/1.7.0": {
-      "sha512": "fHLmJcRJk1dAwddjBgvqi/Grmr04hPo1DoFwTa6hxtSvAFOXPU56Xe9Sh2VXqz6Gstzp6TCju8z0Sob1t7BzSg==",
+    "OpenTelemetry.Api.ProviderBuilderExtensions/1.8.0": {
+      "sha512": "BLo2IwO+sJZMsedvKyMtDJL1Pk7gto2B5lf0rkGKigihUUYDaWwh7HTYtftTamXn0UthCB9B+VUaF7h9AohXMg==",
       "type": "package",
-      "path": "opentelemetry.api.providerbuilderextensions/1.7.0",
+      "path": "opentelemetry.api.providerbuilderextensions/1.8.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.Api.ProviderBuilderExtensions.dll",
         "lib/net462/OpenTelemetry.Api.ProviderBuilderExtensions.xml",
         "lib/net6.0/OpenTelemetry.Api.ProviderBuilderExtensions.dll",
@@ -2858,17 +2863,19 @@
         "lib/netstandard2.0/OpenTelemetry.Api.ProviderBuilderExtensions.dll",
         "lib/netstandard2.0/OpenTelemetry.Api.ProviderBuilderExtensions.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.api.providerbuilderextensions.1.7.0.nupkg.sha512",
+        "opentelemetry.api.providerbuilderextensions.1.8.0.nupkg.sha512",
         "opentelemetry.api.providerbuilderextensions.nuspec"
       ]
     },
-    "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.7.0": {
-      "sha512": "ULGTxg4HdnJD+CIuiD15Uov4xVVqwpbNGFd075J3MT3lLM9XcwU4YRz7CCNmqIlehYaiZrGhUurXrI2LgZZL1Q==",
+    "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.8.0-beta.1": {
+      "sha512": "gN0syH0sTTzxhD0Q7jCCgWDi1A40HpLPxyhVLZ43+LIlglz4TLeKiW6YByKdpAvAlFMvGi9NF6S9zxVkpNSQnw==",
       "type": "package",
-      "path": "opentelemetry.exporter.opentelemetryprotocol/1.7.0",
+      "path": "opentelemetry.exporter.opentelemetryprotocol/1.8.0-beta.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.Exporter.OpenTelemetryProtocol.dll",
         "lib/net462/OpenTelemetry.Exporter.OpenTelemetryProtocol.xml",
         "lib/net6.0/OpenTelemetry.Exporter.OpenTelemetryProtocol.dll",
@@ -2880,7 +2887,7 @@
         "lib/netstandard2.1/OpenTelemetry.Exporter.OpenTelemetryProtocol.dll",
         "lib/netstandard2.1/OpenTelemetry.Exporter.OpenTelemetryProtocol.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.exporter.opentelemetryprotocol.1.7.0.nupkg.sha512",
+        "opentelemetry.exporter.opentelemetryprotocol.1.8.0-beta.1.nupkg.sha512",
         "opentelemetry.exporter.opentelemetryprotocol.nuspec"
       ]
     },
@@ -2902,13 +2909,15 @@
         "opentelemetry.exporter.prometheus.aspnetcore.nuspec"
       ]
     },
-    "OpenTelemetry.Extensions.Hosting/1.7.0": {
-      "sha512": "MbB7CWWqb7xHK0jTF9Gtvw/eLWdaKqzkE1XAwLe05xyskHuwJWAbZFax4nGLA71YkMWQNO5iPIBlirvYXOLMlg==",
+    "OpenTelemetry.Extensions.Hosting/1.8.0-beta.1": {
+      "sha512": "j3JitiVoOtaiERzkJypIVIdyimQQkag/WqR+UsFOzZenhsCXaTKFc3rvm5MSYvbAcTvptYsgkzTZY89KQsK+fg==",
       "type": "package",
-      "path": "opentelemetry.extensions.hosting/1.7.0",
+      "path": "opentelemetry.extensions.hosting/1.8.0-beta.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.Extensions.Hosting.dll",
         "lib/net462/OpenTelemetry.Extensions.Hosting.xml",
         "lib/net6.0/OpenTelemetry.Extensions.Hosting.dll",
@@ -2918,17 +2927,19 @@
         "lib/netstandard2.0/OpenTelemetry.Extensions.Hosting.dll",
         "lib/netstandard2.0/OpenTelemetry.Extensions.Hosting.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.extensions.hosting.1.7.0.nupkg.sha512",
+        "opentelemetry.extensions.hosting.1.8.0-beta.1.nupkg.sha512",
         "opentelemetry.extensions.hosting.nuspec"
       ]
     },
-    "OpenTelemetry.Instrumentation.AspNetCore/1.7.0": {
-      "sha512": "K/mjCmuR9zgrL6fMC6sbnX/y6BOJJFI3hp42O+tz8nT/w6sxbfjrLcU+fVwfct3lsnohSKdPfrq6fSrxAF5ezw==",
+    "OpenTelemetry.Instrumentation.AspNetCore/1.8.0": {
+      "sha512": "ywEkIpDZpA9p4kdmji/Tt6SdkXDrXFQjm+rGxGEWUYR/JmGptWEPjWHfXzKfL+3nqkS64CUF53knLpf2rPCWBA==",
       "type": "package",
-      "path": "opentelemetry.instrumentation.aspnetcore/1.7.0",
+      "path": "opentelemetry.instrumentation.aspnetcore/1.8.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net6.0/OpenTelemetry.Instrumentation.AspNetCore.dll",
         "lib/net6.0/OpenTelemetry.Instrumentation.AspNetCore.xml",
         "lib/net7.0/OpenTelemetry.Instrumentation.AspNetCore.dll",
@@ -2938,17 +2949,19 @@
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.AspNetCore.dll",
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.AspNetCore.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.instrumentation.aspnetcore.1.7.0.nupkg.sha512",
+        "opentelemetry.instrumentation.aspnetcore.1.8.0.nupkg.sha512",
         "opentelemetry.instrumentation.aspnetcore.nuspec"
       ]
     },
-    "OpenTelemetry.Instrumentation.Http/1.7.0": {
-      "sha512": "0pM1EHx/85DsUmtffysYNVZBNkenuYd++ZMgNB0oGLdhIK5EJEmz8+Yi+sjHajU5XvAUtOXPL6Ocd3dZWRQIAw==",
+    "OpenTelemetry.Instrumentation.Http/1.8.0": {
+      "sha512": "jv2//suDd7tLW9uNuL4KTK68kGjN/HjEs6FahmiLVcXdnCzpYo2mPvikRBq1twB3ktfWQEyVWYT6G6FVwvZtIQ==",
       "type": "package",
-      "path": "opentelemetry.instrumentation.http/1.7.0",
+      "path": "opentelemetry.instrumentation.http/1.8.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
         "lib/net462/OpenTelemetry.Instrumentation.Http.dll",
         "lib/net462/OpenTelemetry.Instrumentation.Http.xml",
         "lib/net6.0/OpenTelemetry.Instrumentation.Http.dll",
@@ -2958,14 +2971,14 @@
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.Http.dll",
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.Http.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.instrumentation.http.1.7.0.nupkg.sha512",
+        "opentelemetry.instrumentation.http.1.8.0.nupkg.sha512",
         "opentelemetry.instrumentation.http.nuspec"
       ]
     },
-    "OpenTelemetry.Instrumentation.Runtime/1.7.0": {
-      "sha512": "yHMfoLHLJknhPHWwjzIyEWtfAawzRnevVJ4EWfBmZNH1vxoZ8qh8eq3UadymTqm/L6r9BJaLmdp/U4AzHhhY2Q==",
+    "OpenTelemetry.Instrumentation.Runtime/1.8.0": {
+      "sha512": "Ma7TL1leE/8qtD1mg8iiNND9VxmPpb81JCVfuSHKZImtaFHCfwKBtVB9SJ42/hHdy6I0Oi/TBQzWnfZvx0or2A==",
       "type": "package",
-      "path": "opentelemetry.instrumentation.runtime/1.7.0",
+      "path": "opentelemetry.instrumentation.runtime/1.8.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -2976,7 +2989,7 @@
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.Runtime.dll",
         "lib/netstandard2.0/OpenTelemetry.Instrumentation.Runtime.xml",
         "opentelemetry-icon-color.png",
-        "opentelemetry.instrumentation.runtime.1.7.0.nupkg.sha512",
+        "opentelemetry.instrumentation.runtime.1.8.0.nupkg.sha512",
         "opentelemetry.instrumentation.runtime.nuspec"
       ]
     },
@@ -3744,13 +3757,13 @@
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 8.0.17",
       "Microsoft.AspNetCore.OpenApi >= 8.0.17",
       "Microsoft.Extensions.Http.Polly >= 8.0.2",
-      "OpenTelemetry >= 1.7.0",
-      "OpenTelemetry.Exporter.OpenTelemetryProtocol >= 1.7.0",
+      "OpenTelemetry >= 1.8.0-beta.1",
+      "OpenTelemetry.Exporter.OpenTelemetryProtocol >= 1.8.0-beta.1",
       "OpenTelemetry.Exporter.Prometheus.AspNetCore >= 1.8.0-beta.1",
-      "OpenTelemetry.Extensions.Hosting >= 1.7.0",
-      "OpenTelemetry.Instrumentation.AspNetCore >= 1.7.0",
-      "OpenTelemetry.Instrumentation.Http >= 1.7.0",
-      "OpenTelemetry.Instrumentation.Runtime >= 1.7.0",
+      "OpenTelemetry.Extensions.Hosting >= 1.8.0-beta.1",
+      "OpenTelemetry.Instrumentation.AspNetCore >= 1.8.0-beta.1",
+      "OpenTelemetry.Instrumentation.Http >= 1.8.0-beta.1",
+      "OpenTelemetry.Instrumentation.Runtime >= 1.8.0-beta.1",
       "Polly >= 8.2.1",
       "Serilog.AspNetCore >= 8.0.0",
       "Serilog.Sinks.Console >= 5.0.1",
@@ -3832,11 +3845,11 @@
           },
           "OpenTelemetry": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Exporter.Prometheus.AspNetCore": {
             "target": "Package",
@@ -3844,19 +3857,19 @@
           },
           "OpenTelemetry.Extensions.Hosting": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Instrumentation.AspNetCore": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Instrumentation.Http": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "OpenTelemetry.Instrumentation.Runtime": {
             "target": "Package",
-            "version": "[1.7.0, )"
+            "version": "[1.8.0-beta.1, )"
           },
           "Polly": {
             "target": "Package",
@@ -3908,10 +3921,40 @@
   },
   "logs": [
     {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "OrderService depends on OpenTelemetry.Instrumentation.AspNetCore (>= 1.8.0-beta.1) but OpenTelemetry.Instrumentation.AspNetCore 1.8.0-beta.1 was not found. OpenTelemetry.Instrumentation.AspNetCore 1.8.0 was resolved instead.",
+      "libraryId": "OpenTelemetry.Instrumentation.AspNetCore",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "OrderService depends on OpenTelemetry.Instrumentation.Http (>= 1.8.0-beta.1) but OpenTelemetry.Instrumentation.Http 1.8.0-beta.1 was not found. OpenTelemetry.Instrumentation.Http 1.8.0 was resolved instead.",
+      "libraryId": "OpenTelemetry.Instrumentation.Http",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "OrderService depends on OpenTelemetry.Instrumentation.Runtime (>= 1.8.0-beta.1) but OpenTelemetry.Instrumentation.Runtime 1.8.0-beta.1 was not found. OpenTelemetry.Instrumentation.Runtime 1.8.0 was resolved instead.",
+      "libraryId": "OpenTelemetry.Instrumentation.Runtime",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
       "code": "NU1902",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "Package 'OpenTelemetry.Instrumentation.AspNetCore' 1.7.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
+      "message": "Package 'OpenTelemetry.Instrumentation.AspNetCore' 1.8.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
       "libraryId": "OpenTelemetry.Instrumentation.AspNetCore",
       "targetGraphs": [
         "net8.0"
@@ -3921,17 +3964,8 @@
       "code": "NU1902",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "Package 'OpenTelemetry.Instrumentation.Http' 1.7.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
+      "message": "Package 'OpenTelemetry.Instrumentation.Http' 1.8.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-vh2m-22xx-q94f",
       "libraryId": "OpenTelemetry.Instrumentation.Http",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    },
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: OpenTelemetry from 1.8.0-beta.1 to 1.7.0. Reference the package directly from the project to select a different version. \n OrderService -> OpenTelemetry.Exporter.Prometheus.AspNetCore 1.8.0-beta.1 -> OpenTelemetry (>= 1.8.0-beta.1) \n OrderService -> OpenTelemetry (>= 1.7.0)",
-      "libraryId": "OpenTelemetry",
       "targetGraphs": [
         "net8.0"
       ]

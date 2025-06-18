@@ -31,13 +31,6 @@ exporters:
 
   loki:
     endpoint: "http://loki:3100/loki/api/v1/push"
-    tenant_id: "microservices"
-    labels:
-      resource:
-        service.name: "service_name"
-        service.instance.id: "service_instance_id"
-      attributes:
-        level: "severity_text"
 
   otlp/tempo:
     endpoint: "tempo:4317"
