@@ -34,9 +34,6 @@ metrics_generator:
   ring:
     kvstore:
       store: memberlist
-  processors:
-    - service-graphs
-    - span-metrics
 
 memberlist:
   abort_if_cluster_join_fails: false
