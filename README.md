@@ -413,7 +413,7 @@ Le projet intègre une stack complète d'observabilité pour surveiller, débogu
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
 - **Loki**: http://localhost:3100
-- **Tempo**: http://localhost:3200
+- **Tempo**: http://localhost:3200 (UI), http://localhost:4319 (OTLP gRPC)
 
 ## Endpoints API
 
