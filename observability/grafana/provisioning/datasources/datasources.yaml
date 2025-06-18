@@ -25,6 +25,9 @@ datasources:
     jsonData:
       httpMethod: GET
       apiVersion: "tempo"
+      timeShiftEnabled: true
+      spanBarType: "duration"
+      grpcSupported: false
       tracesToLogs:
         datasourceUid: 'loki'
         tags: ['service.name', 'job']
