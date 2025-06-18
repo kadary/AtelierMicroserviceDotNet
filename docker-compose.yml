@@ -176,6 +176,7 @@ services:
     image: grafana/tempo:latest
     container_name: tempo
     command: [ "-config.file=/etc/tempo.yaml" ]
+    user: root
     volumes:
       - ./observability/tempo-config.yaml:/etc/tempo.yaml
       - tempo-data:/tmp/tempo
