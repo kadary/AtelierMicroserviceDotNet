@@ -25,5 +25,23 @@ storage:
     local:
       path: /tmp/tempo/blocks
 
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: /tmp/tempo/generator/wal
+  ring:
+    kvstore:
+      store: memberlist
+  processors:
+    - service-graphs
+    - span-metrics
+
+memberlist:
+  abort_if_cluster_join_fails: false
+  join_members:
+    - tempo
+
 overrides:
   metrics_generator_processors: [service-graphs, span-metrics]

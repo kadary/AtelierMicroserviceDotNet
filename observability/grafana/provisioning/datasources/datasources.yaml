@@ -24,6 +24,7 @@ datasources:
     editable: false
     jsonData:
       httpMethod: GET
+      apiVersion: "tempo"
       tracesToLogs:
         datasourceUid: 'loki'
         tags: ['service.name', 'job']

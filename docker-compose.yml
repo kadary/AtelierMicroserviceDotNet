@@ -134,6 +134,8 @@ services:
       - "4318:4318"   # OTLP HTTP
       - "8888:8888"   # Metrics
       - "8889:8889"   # Prometheus exporter
+    depends_on:
+      - tempo
     networks:
       - microservices-network
 
@@ -179,7 +181,7 @@ services:
       - tempo-data:/tmp/tempo
     ports:
       - "3200:3200"   # tempo
-      - "4319:4317"   # otlp grpc (external:internal)
+      - "14317:4317"   # otlp grpc (external:internal)
     networks:
       - microservices-network
 
@@ -195,6 +197,8 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LIVE_MAX_CONNECTIONS=0
+      - GF_FEATURE_TOGGLES_ENABLE=
     ports:
       - "3000:3000"
     networks:
