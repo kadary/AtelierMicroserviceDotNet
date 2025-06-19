@@ -41,4 +41,4 @@ memberlist:
     - tempo
 
 overrides:
-  metrics_generator_processors: [service-graphs, span-metrics]
+  metrics_generator_processors: [service-graphs, span-metrics, local-blocks]
