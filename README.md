@@ -346,11 +346,91 @@ docker-compose logs -f
 
 - Docker et Docker Compose
 - .NET 8 SDK (pour le développement)
+- Kubernetes (Docker Desktop avec Kubernetes activé ou Minikube)
+- kubectl (outil en ligne de commande Kubernetes)
 
 ### Démarrage avec Docker Compose
 
 ```bash
 docker-compose up -d
+```
+
+### Démarrage avec Kubernetes
+
+Le projet inclut des descripteurs Kubernetes pour déployer l'application dans un cluster Kubernetes.
+
+#### Architecture Kubernetes
+
+L'architecture Kubernetes suit la même structure que la version Docker Compose, mais avec quelques différences importantes :
+
+1. **Namespace dédié** : Tous les composants sont déployés dans un namespace `microservices` dédié pour une meilleure isolation.
+
+2. **Services Kubernetes** : Chaque composant est exposé via un Service Kubernetes :
+   - Les services internes sont de type ClusterIP (accessibles uniquement à l'intérieur du cluster)
+   - L'API Gateway est exposé via un service de type LoadBalancer (accessible depuis l'extérieur)
+   - Grafana est également accessible depuis l'extérieur pour la visualisation
+
+3. **ConfigMaps** : Les configurations sont stockées dans des ConfigMaps Kubernetes :
+   - Configuration RabbitMQ
+   - Configuration Grafana
+   - Configuration des outils d'observabilité (Prometheus, Loki, Tempo, OpenTelemetry)
+
+4. **Volumes** : Des volumes emptyDir sont utilisés pour la persistance des données (dans un environnement de production, vous devriez utiliser des PersistentVolumes)
+
+5. **Probes de santé** : Chaque déploiement inclut des probes de santé (liveness et readiness) pour une meilleure résilience
+
+6. **Ressources** : Des limites et requêtes de ressources sont définies pour chaque conteneur
+
+7. **Kustomize** : Un fichier kustomization.yaml est fourni pour faciliter le déploiement de tous les composants
+
+#### Étape 1: Construire les images Docker
+
+Avant de déployer sur Kubernetes, vous devez construire les images Docker localement :
+
+```bash
+docker-compose build
+```
+
+#### Étape 2: Déployer sur Kubernetes
+
+Utilisez kubectl avec kustomize pour déployer tous les composants :
+
+```bash
+kubectl apply -k kubernetes/
+```
+
+Cette commande déploiera :
+- Le namespace `microservices`
+- Les ConfigMaps pour la configuration
+- Les composants d'infrastructure (RabbitMQ, Prometheus, Loki, Tempo, OpenTelemetry Collector, Grafana)
+- Les microservices (IdentityServer, ApiGateway, ProductService, OrderService, NotificationService)
+
+#### Étape 3: Vérifier le déploiement
+
+Vérifiez que tous les pods sont en cours d'exécution :
+
+```bash
+kubectl get pods -n microservices
+```
+
+#### Étape 4: Accéder aux services
+
+L'API Gateway est exposée via un service de type LoadBalancer sur le port 8080 :
+
+```bash
+kubectl get service api-gateway-service -n microservices
+```
+
+Vous pouvez accéder à l'API Gateway à l'adresse http://localhost:8080
+
+Grafana est accessible à l'adresse http://localhost:3000 (utilisateur: admin, mot de passe: admin)
+
+#### Étape 5: Supprimer le déploiement
+
+Pour supprimer tous les composants déployés :
+
+```bash
+kubectl delete -k kubernetes/
 ```
 
 ## Observabilité

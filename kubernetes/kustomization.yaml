@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  # ConfigMaps
+  - rabbitmq-config.yaml
+  - grafana-config.yaml
+  - otel-collector-config.yaml
+  - prometheus-config.yaml
+  - loki-config.yaml
+  - tempo-config.yaml
+  - grafana-datasources-config.yaml
+  - grafana-dashboards-config.yaml
+  - grafana-dashboard-json.yaml
+  # Infrastructure
+  - rabbitmq.yaml
+  - prometheus.yaml
+  - loki.yaml
+  - tempo.yaml
+  - otel-collector.yaml
+  - grafana.yaml
+  # Microservices
+  - identity-server.yaml
+  - api-gateway.yaml
+  - product-service.yaml
+  - order-service.yaml
+  - notification-service.yaml
