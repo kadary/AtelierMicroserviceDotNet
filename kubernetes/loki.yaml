@@ -13,7 +13,7 @@ spec:
       labels:
         app: loki
     spec:
-      containers:
+      containers:500m
       - name: loki
         image: grafana/loki:latest
         args:
@@ -24,7 +24,7 @@ spec:
         resources:
           limits:
             memory: "512Mi"
-            cpu: "500m"
+            cpu: ""
           requests:
             memory: "256Mi"
             cpu: "250m"
