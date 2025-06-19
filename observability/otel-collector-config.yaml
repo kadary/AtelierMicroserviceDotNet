@@ -54,7 +54,6 @@ service:
       level: "debug"
     metrics:
       level: "detailed"
-      address: "0.0.0.0:8888"
   extensions: [health_check]
   pipelines:
     traces:
