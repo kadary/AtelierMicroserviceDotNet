@@ -24,7 +24,14 @@
       ],
       "UpstreamPathTemplate": "/api/orders/{everything}",
       "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete" ],
-      "SwaggerKey": "orders"
+      "SwaggerKey": "orders",
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": [ "orders:read", "orders:write" ]
+      },
+      "RouteClaimsRequirement": {
+        "scope": "orders:write"
+      }
     },
     {
       "DownstreamPathTemplate": "/api/notifications/{everything}",

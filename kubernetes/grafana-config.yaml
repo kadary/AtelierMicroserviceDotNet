@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: microservices
+data:
+  GF_SECURITY_ADMIN_USER: admin
+  GF_SECURITY_ADMIN_PASSWORD: admin
+  GF_USERS_ALLOW_SIGN_UP: "false"
+  GF_LIVE_MAX_CONNECTIONS: "0"
+  GF_FEATURE_TOGGLES_ENABLE: ""

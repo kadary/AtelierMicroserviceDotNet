@@ -1,10 +1,37 @@
-version: '3.8'
-
 services:
+  # Identity Server
+  identity-server:
+    image: identity-server
+    container_name: identity-server
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: src/IdentityServer/Dockerfile
+    ports:
+      - "5004:5004"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5004
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=identity-server
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=identity-server,service.version=1.0.0,deployment.environment=development
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_DOTNET_AUTO_HOME=/app
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - microservices-network
+    volumes:
+      - ./logs:/app/logs
+
   # API Gateway
   api-gateway:
     image: api-gateway
     container_name: api-gateway
+    restart: unless-stopped
     build:
       context: .
       dockerfile: src/ApiGateway/Dockerfile
@@ -13,10 +40,22 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=api-gateway,service.version=1.0.0,deployment.environment=development
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_DOTNET_AUTO_HOME=/app
     depends_on:
-      - product-service
-      - order-service
-      - notification-service
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
     networks:
       - microservices-network
     volumes:
@@ -26,6 +65,7 @@ services:
   product-service:
     image: product-service
     container_name: product-service
+    restart: unless-stopped
     build:
       context: .
       dockerfile: src/ProductService/Dockerfile
@@ -34,6 +74,16 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=product-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=product-service,service.version=1.0.0,deployment.environment=development
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_DOTNET_AUTO_HOME=/app
+    depends_on:
+      otel-collector:
+        condition: service_started
     networks:
       - microservices-network
     volumes:
@@ -43,6 +93,7 @@ services:
   order-service:
     image: order-service
     container_name: order-service
+    restart: unless-stopped
     build:
       context: .
       dockerfile: src/OrderService/Dockerfile
@@ -51,8 +102,18 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5002
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=order-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.version=1.0.0,deployment.environment=development
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_DOTNET_AUTO_HOME=/app
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - microservices-network
     volumes:
@@ -62,6 +123,7 @@ services:
   notification-service:
     image: notification-service
     container_name: notification-service
+    restart: unless-stopped
     build:
       context: .
       dockerfile: src/NotificationService/Dockerfile
@@ -70,8 +132,18 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5003
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=notification-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=notification-service,service.version=1.0.0,deployment.environment=development
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_DOTNET_AUTO_HOME=/app
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - microservices-network
     volumes:
@@ -81,16 +153,147 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    restart: unless-stopped
     ports:
       - "5672:5672"  # AMQP port
       - "15672:15672"  # Management UI port
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       - microservices-network
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Metrics
+      - "8889:8889"   # Prometheus exporter
+      - "13133:13133" # Health check
+    restart: unless-stopped
+    depends_on:
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+    links:
+      - tempo:tempo
+      - prometheus:prometheus
+      - loki:loki
+    networks:
+      - microservices-network
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - microservices-network
+
+  # Loki (Logs)
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    user: root
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - microservices-network
+
+  # Tempo (Traces)
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    user: root
+    volumes:
+      - ./observability/tempo-config.yaml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # tempo
+      - "14317:4317"   # otlp grpc (external:internal)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - microservices-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_LIVE_MAX_CONNECTIONS=0
+      - GF_FEATURE_TOGGLES_ENABLE=
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_healthy
+    links:
+      - tempo:tempo
 
 networks:
   microservices-network:
@@ -98,3 +301,6 @@ networks:
 
 volumes:
   rabbitmq-data:
+  prometheus-data:
+  tempo-data:
+  grafana-data:

@@ -1,7 +1,15 @@
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 using ProductService.Models;
 using ProductService.Repositories;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,13 +17,66 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/product-service-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = "http://otel-collector:4317";
+        options.Protocol = OtlpProtocol.Grpc;
+        options.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = "product-service",
+            ["service.environment"] = builder.Environment.EnvironmentName
+        };
+    })
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "ProductService")
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure OpenTelemetry
+var serviceName = "product-service";
+var serviceVersion = "1.0.0";
+
+// Configure OpenTelemetry Resources
+var resourceBuilder = ResourceBuilder.CreateDefault()
+    .AddService(serviceName: serviceName, serviceVersion: serviceVersion)
+    .AddTelemetrySdk()
+    .AddEnvironmentVariableDetector();
+
+// Configure OpenTelemetry Tracing and Metrics
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    })
+    .WithMetrics(metricsProviderBuilder =>
+    {
+        metricsProviderBuilder
+            .SetResourceBuilder(resourceBuilder)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://otel-collector:4317");
+            });
+    });
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { 
@@ -23,10 +84,60 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "A microservice for managing products"
     });
+
+    // Add JWT Authentication support to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // Register repositories
 builder.Services.AddSingleton<IProductRepository, ProductRepository>();
+
+// Add Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.Authority = "http://identity-server:5004"; // IdentityServer URL
+    options.RequireHttpsMetadata = false; // For development only
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateAudience = false
+    };
+});
+
+// Add Authorization
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ProductsReadPolicy", policy =>
+        policy.RequireClaim("scope", "products:read"));
+    options.AddPolicy("ProductsWritePolicy", policy =>
+        policy.RequireClaim("scope", "products:write"));
+});
 
 var app = builder.Build();
 
@@ -36,19 +147,25 @@ app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Starting ProductService");
 
 // Product endpoints
 var productsGroup = app.MapGroup("/api/products")
     .WithTags("Products")
-    .WithOpenApi();
+    .WithOpenApi()
+    .RequireAuthorization(); // Require authorization for all endpoints in this group
 
 // Get all products
 productsGroup.MapGet("/", async (IProductRepository repository) =>
 {
     logger.LogInformation("Request received: Get all products");
     var products = await repository.GetAllAsync();
+    logger.LogInformation("Returning {Count} products", products.Count());
     return Results.Ok(products);
 })
 .WithName("GetAllProducts")
@@ -77,10 +194,12 @@ productsGroup.MapGet("/{id}", async (Guid id, IProductRepository repository) =>
 // Create product
 productsGroup.MapPost("/", async (Product product, IProductRepository repository) =>
 {
-    logger.LogInformation("Request received: Create product {ProductName}", product.Name);
+    logger.LogInformation("Request received: Create product {ProductName} with price {Price} and stock {Stock}", 
+        product.Name, product.Price, product.StockQuantity);
     var createdProduct = await repository.CreateAsync(product);
 
-    logger.LogInformation("Product created: {Id}", createdProduct.Id);
+    logger.LogInformation("Product created: {Id}, Name: {Name}, Price: {Price}, Stock: {Stock}", 
+        createdProduct.Id, createdProduct.Name, createdProduct.Price, createdProduct.StockQuantity);
     return Results.Created($"/api/products/{createdProduct.Id}", createdProduct);
 })
 .WithName("CreateProduct")
@@ -131,6 +250,78 @@ productsGroup.MapDelete("/{id}", async (Guid id, IProductRepository repository) 
 .Produces(StatusCodes.Status204NoContent)
 .Produces(StatusCodes.Status404NotFound);
 
+// Reserve products endpoint
+productsGroup.MapPost("/reserve", async (ReserveProductsRequest request, IProductRepository repository, ILogger<Program> logger) =>
+{
+    logger.LogInformation("Request received: Reserve products for order {OrderId}", request.OrderId);
+
+    try
+    {
+        // Convert the request to the format expected by the repository
+        var productReservations = request.Items.Select(item => (item.ProductId, item.Quantity)).ToList();
+
+        // Attempt to reserve the products
+        var (success, errorMessage) = await repository.ReserveProductsAsync(productReservations);
+
+        if (success)
+        {
+            logger.LogInformation("Products reserved successfully for order {OrderId}", request.OrderId);
+            return Results.Ok(new { Success = true });
+        }
+        else
+        {
+            logger.LogWarning("Failed to reserve products for order {OrderId}: {ErrorMessage}", request.OrderId, errorMessage);
+            return Results.BadRequest(new { Success = false, ErrorMessage = errorMessage });
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error reserving products for order {OrderId}", request.OrderId);
+        return Results.Problem("An error occurred while reserving products.");
+    }
+})
+.WithName("ReserveProducts")
+.WithDescription("Reserves products for an order")
+.Produces<object>(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
+// Release products endpoint
+productsGroup.MapPost("/release", async (ReleaseProductsRequest request, IProductRepository repository, ILogger<Program> logger) =>
+{
+    logger.LogInformation("Request received: Release products for order {OrderId}", request.OrderId);
+
+    try
+    {
+        // Convert the request to the format expected by the repository
+        var productReservations = request.Items.Select(item => (item.ProductId, item.Quantity)).ToList();
+
+        // Release the products
+        var success = await repository.ReleaseProductsAsync(productReservations);
+
+        if (success)
+        {
+            logger.LogInformation("Products released successfully for order {OrderId}", request.OrderId);
+            return Results.Ok(new { Success = true });
+        }
+        else
+        {
+            logger.LogWarning("Failed to release products for order {OrderId}", request.OrderId);
+            return Results.BadRequest(new { Success = false });
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error releasing products for order {OrderId}", request.OrderId);
+        return Results.Problem("An error occurred while releasing products.");
+    }
+})
+.WithName("ReleaseProducts")
+.WithDescription("Releases previously reserved products")
+.Produces<object>(StatusCodes.Status200OK)
+.Produces<object>(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
 // Health check endpoint
 app.MapGet("/health", () =>
 {
@@ -142,3 +333,22 @@ app.MapGet("/health", () =>
 .WithTags("Health");
 
 app.Run();
+
+// Define request models
+public class ReserveProductsRequest
+{
+    public Guid OrderId { get; set; }
+    public List<ProductReservationItem> Items { get; set; } = new();
+}
+
+public class ReleaseProductsRequest
+{
+    public Guid OrderId { get; set; }
+    public List<ProductReservationItem> Items { get; set; } = new();
+}
+
+public class ProductReservationItem
+{
+    public Guid ProductId { get; set; }
+    public int Quantity { get; set; }
+}

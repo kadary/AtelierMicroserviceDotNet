@@ -30,7 +30,7 @@ public class ProductRepository : IProductRepository
         {
             _products.TryAdd(product.Id, product);
         }
-        
+
         _logger.LogInformation("ProductRepository initialized with {Count} sample products", _products.Count);
     }
 
@@ -66,7 +66,7 @@ public class ProductRepository : IProductRepository
             _products[product.Id] = product;
             return Task.FromResult<Product?>(product);
         }
-        
+
         _logger.LogWarning("Product not found for update: {Id}", product.Id);
         return Task.FromResult<Product?>(null);
     }
@@ -81,5 +81,65 @@ public class ProductRepository : IProductRepository
             _logger.LogWarning("Product not found for deletion: {Id}", id);
         }
         return Task.FromResult(result);
+    }
+
+    /// <inheritdoc />
+    public Task<(bool Success, string ErrorMessage)> ReserveProductsAsync(List<(Guid ProductId, int Quantity)> productReservations)
+    {
+        _logger.LogInformation("Attempting to reserve {Count} products", productReservations.Count);
+
+        // Check if all products exist and have enough stock
+        foreach (var (productId, quantity) in productReservations)
+        {
+            if (!_products.TryGetValue(productId, out var product))
+            {
+                _logger.LogWarning("Product not found for reservation: {ProductId}", productId);
+                return Task.FromResult((Success: false, ErrorMessage: $"Product not found: {productId}"));
+            }
+
+            if (product.StockQuantity < quantity)
+            {
+                _logger.LogWarning("Insufficient stock for product {ProductId}. Requested: {Requested}, Available: {Available}", 
+                    productId, quantity, product.StockQuantity);
+                return Task.FromResult((Success: false, ErrorMessage: $"Insufficient stock for product {product.Name}. Requested: {quantity}, Available: {product.StockQuantity}"));
+            }
+        }
+
+        // All products exist and have enough stock, so reserve them
+        foreach (var (productId, quantity) in productReservations)
+        {
+            var product = _products[productId];
+            product.StockQuantity -= quantity;
+            _products[productId] = product;
+
+            _logger.LogInformation("Reserved {Quantity} units of product {ProductId}. New stock: {NewStock}", 
+                quantity, productId, product.StockQuantity);
+        }
+
+        return Task.FromResult((Success: true, ErrorMessage: string.Empty));
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ReleaseProductsAsync(List<(Guid ProductId, int Quantity)> productReservations)
+    {
+        _logger.LogInformation("Releasing {Count} products", productReservations.Count);
+
+        foreach (var (productId, quantity) in productReservations)
+        {
+            if (_products.TryGetValue(productId, out var product))
+            {
+                product.StockQuantity += quantity;
+                _products[productId] = product;
+
+                _logger.LogInformation("Released {Quantity} units of product {ProductId}. New stock: {NewStock}", 
+                    quantity, productId, product.StockQuantity);
+            }
+            else
+            {
+                _logger.LogWarning("Product not found for release: {ProductId}", productId);
+            }
+        }
+
+        return Task.FromResult(true);
     }
 }

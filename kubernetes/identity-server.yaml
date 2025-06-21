@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-server
+  namespace: microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: identity-server
+  template:
+    metadata:
+      labels:
+        app: identity-server
+    spec:
+      containers:
+      - name: identity-server
+        image: identity-server:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5004
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: ASPNETCORE_URLS
+          value: "http://+:5004"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector-service:4317"
+        - name: OTEL_SERVICE_NAME
+          value: "identity-server"
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: "service.name=identity-server,service.version=1.0.0,deployment.environment=development"
+        - name: OTEL_LOGS_EXPORTER
+          value: "otlp"
+        - name: OTEL_METRICS_EXPORTER
+          value: "otlp"
+        - name: OTEL_TRACES_EXPORTER
+          value: "otlp"
+        - name: OTEL_DOTNET_AUTO_HOME
+          value: "/app"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5004
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-server-service
+  namespace: microservices
+spec:
+  selector:
+    app: identity-server
+  ports:
+  - port: 5004
+    targetPort: 5004
+    name: http
